@@ -7,6 +7,16 @@ const OTTAWA_CENTER: [number, number] = [-75.6972, 45.4215];
 const SOURCE_ID = "ottawa-grocery-stores";
 const POINTS_LAYER_ID = "ottawa-grocery-points";
 const SELECTED_LAYER_ID = "ottawa-grocery-selected";
+const LABELS_LAYER_ID = "ottawa-grocery-labels";
+const FRESHNESS_COLOR_EXPRESSION: import("mapbox-gl").ExpressionSpecification = [
+  "match",
+  ["get", "callFreshness"],
+  "recent",
+  "#4aa768",
+  "aging",
+  "#e0b03d",
+  "#d55c57",
+];
 
 type OttawaGroceryMapProps = {
   accessToken?: string;
@@ -52,6 +62,8 @@ function buildStoreFeatureCollection(stores: StoreRecord[]) {
       properties: {
         storeId: store.id,
         name: store.name,
+        callFreshness: store.callFreshness,
+        lastCalledLabel: store.lastCalledLabel,
       },
     })),
   };
@@ -187,7 +199,7 @@ export function OttawaGroceryMap({
           source: SOURCE_ID,
           paint: {
             "circle-radius": isFullscreen ? 8 : 7,
-            "circle-color": "#f5a623",
+            "circle-color": FRESHNESS_COLOR_EXPRESSION,
             "circle-stroke-width": 2,
             "circle-stroke-color": "#fffdf9",
             "circle-opacity": 0.95,
@@ -201,13 +213,34 @@ export function OttawaGroceryMap({
           filter: ["==", ["get", "storeId"], selectedStoreIdRef.current ?? ""],
           paint: {
             "circle-radius": isFullscreen ? 13 : 11,
-            "circle-color": "#1f1c19",
+            "circle-color": FRESHNESS_COLOR_EXPRESSION,
             "circle-stroke-width": 3,
-            "circle-stroke-color": "#fffdf9",
+            "circle-stroke-color": "#1f1c19",
           },
         });
 
-        [POINTS_LAYER_ID, SELECTED_LAYER_ID].forEach((layerId) => {
+        map.addLayer({
+          id: LABELS_LAYER_ID,
+          type: "symbol",
+          source: SOURCE_ID,
+          layout: {
+            "text-field": ["get", "lastCalledLabel"],
+            "text-size": isFullscreen ? 11 : 10,
+            "text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
+            "text-offset": [1.2, 0],
+            "text-anchor": "left",
+            "text-allow-overlap": true,
+            "text-ignore-placement": true,
+          },
+          paint: {
+            "text-color": "#5d534b",
+            "text-halo-color": "#fffdf9",
+            "text-halo-width": 1.2,
+            "text-halo-blur": 0.2,
+          },
+        });
+
+        [POINTS_LAYER_ID, SELECTED_LAYER_ID, LABELS_LAYER_ID].forEach((layerId) => {
           map.on("mouseenter", layerId, (event) => {
             map.getCanvas().style.cursor = "pointer";
             const feature = event.features?.[0];
@@ -233,7 +266,7 @@ export function OttawaGroceryMap({
           }
 
           const features = map.queryRenderedFeatures(event.point, {
-            layers: [POINTS_LAYER_ID],
+            layers: [POINTS_LAYER_ID, LABELS_LAYER_ID],
           });
 
           if (features.length === 0) {

@@ -2,7 +2,7 @@
 
 import { useDeferredValue, useEffect, useState } from "react";
 import { OttawaGroceryMap } from "./components/ottawa-grocery-map";
-import type { DashboardTab, StoreRecord } from "./dashboard-types";
+import type { CallFreshness, DashboardTab, StoreRecord } from "./dashboard-types";
 
 const MAPBOX_ACCESS_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
 const OTTAWA_GROCERY_SEARCH_URL = "https://api.mapbox.com/search/searchbox/v1/category";
@@ -74,6 +74,67 @@ function chunkArray<T>(items: T[], size: number) {
   return chunks;
 }
 
+function hashValue(value: string) {
+  let hash = 0;
+
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
+  }
+
+  return hash;
+}
+
+function formatDuration(totalSeconds: number) {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}m ${seconds.toString().padStart(2, "0")}s`;
+}
+
+function buildMockStoreMetrics(seedSource: string) {
+  const seed = hashValue(seedSource);
+  const hoursSinceLastCall = 6 + (seed % (24 * 90));
+  const missedCalls = seed % 6;
+  const averageCallDurationSeconds = 95 + (seed % 265);
+  const pendingCallsCount = (seed >> 4) % 3;
+  const pendingCallOffsetHours = 8 + ((seed >> 7) % 60);
+  const pendingCallDate = new Date("2026-03-16T09:00:00-04:00");
+  pendingCallDate.setHours(pendingCallDate.getHours() + pendingCallOffsetHours);
+  const daysSinceLastCall = Math.floor(hoursSinceLastCall / 24);
+  const callFreshness: CallFreshness =
+    hoursSinceLastCall <= 24 * 30
+      ? "recent"
+      : hoursSinceLastCall <= 24 * 60
+        ? "aging"
+        : "stale";
+
+  return {
+    lastCalledHoursAgo: hoursSinceLastCall,
+    lastCalledLabel:
+      hoursSinceLastCall < 24
+        ? `${hoursSinceLastCall}h ago`
+        : daysSinceLastCall <= 30
+          ? `${daysSinceLastCall}d ago`
+          : daysSinceLastCall <= 60
+            ? `${Math.max(2, Math.round(daysSinceLastCall / 7))}w ago`
+            : `${Math.max(2, Math.round(daysSinceLastCall / 30))}mo ago`,
+    callFreshness,
+    missedCalls,
+    averageCallDurationLabel: formatDuration(averageCallDurationSeconds),
+    pendingCallsCount,
+    nextPendingCallLabel:
+      pendingCallsCount > 0
+        ? new Intl.DateTimeFormat("en-CA", {
+            dateStyle: "medium",
+            timeStyle: "short",
+          }).format(pendingCallDate)
+        : null,
+    pendingCallWindowLabel:
+      pendingCallsCount > 0
+        ? `${pendingCallOffsetHours}h from now`
+        : "No pending calls scheduled",
+  };
+}
+
 function toStoreRecord(feature: MapboxSearchFeature) {
   const properties = feature.properties;
   const coordinates = feature.geometry?.coordinates;
@@ -101,16 +162,19 @@ function toStoreRecord(feature: MapboxSearchFeature) {
     return null;
   }
 
+  const id =
+    properties?.mapbox_id ??
+    feature.id ??
+    buildStoreKey(name, longitude, latitude);
+  const metrics = buildMockStoreMetrics(`${id}-${name}`);
+
   return {
-    id:
-      properties?.mapbox_id ??
-      feature.id ??
-      buildStoreKey(name, longitude, latitude),
+    id,
     name,
     address: address || "Ottawa, Ontario",
     longitude,
     latitude,
-    lastCalledLabel: "Not available yet",
+    ...metrics,
   } satisfies StoreRecord;
 }
 
@@ -221,13 +285,23 @@ export default function Home() {
     stores.find((store) => store.id === selectedStoreId) ?? null;
   const activeTabMeta = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
   const queuedCallLabel = selectedStore ? queuedCalls[selectedStore.id] ?? null : null;
+  const pendingCallsTotal =
+    (selectedStore?.pendingCallsCount ?? 0) + (queuedCallLabel ? 1 : 0);
   const activePanelTitle =
     activeTab === "planned" && queuedCallLabel
       ? "1 planned call queued"
+      : activeTab === "planned" && (selectedStore?.pendingCallsCount ?? 0) > 0
+        ? `${selectedStore?.pendingCallsCount ?? 0} planned calls`
+        : activeTab === "missed" && (selectedStore?.missedCalls ?? 0) > 0
+          ? `${selectedStore?.missedCalls ?? 0} missed calls`
       : activeTabMeta.emptyTitle;
   const activePanelBody =
     activeTab === "planned" && queuedCallLabel
       ? `This store has a queued call scheduled for ${queuedCallLabel}.`
+      : activeTab === "planned" && selectedStore?.nextPendingCallLabel
+        ? `The next planned call for this store is scheduled for ${selectedStore.nextPendingCallLabel}.`
+        : activeTab === "missed" && (selectedStore?.missedCalls ?? 0) > 0
+          ? "These missed calls represent prior outreach attempts that were not answered."
       : activeTabMeta.emptyBody;
 
   useEffect(() => {
@@ -427,23 +501,13 @@ export default function Home() {
         <section className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[340px_minmax(0,1fr)] 2xl:grid-cols-[360px_minmax(0,1fr)]">
           <div className="flex min-h-0 flex-col gap-4">
             <div className="rounded-[30px] border border-[color:var(--border)] bg-[color:var(--surface)] p-5 shadow-[0_24px_80px_-46px_rgba(20,20,20,0.16)] backdrop-blur sm:p-6">
-              <div className="flex items-start justify-between gap-3">
-                <div className="max-w-xs">
-                  <h2 className="text-xl font-semibold text-[color:var(--foreground)]">
-                    Store controls
-                  </h2>
-                  <p className="mt-2 text-sm leading-6 text-[color:var(--muted-strong)]">
-                    Search Ottawa grocery stores and open the full recent-history view from one place.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsSearchOpen((open) => !open)}
-                  className="rounded-full border border-[color:var(--border-strong)] bg-[color:var(--accent)] px-4 py-2 text-sm font-medium text-[color:var(--foreground)] transition hover:bg-[color:var(--accent-strong)]"
-                  aria-expanded={isSearchOpen}
-                >
-                  {isSearchOpen ? "Hide" : "Open"}
-                </button>
+              <div className="max-w-xs">
+                <h2 className="text-xl font-semibold text-[color:var(--foreground)]">
+                  Store controls
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-[color:var(--muted-strong)]">
+                  Search Ottawa grocery stores and open the full recent-history view from one place.
+                </p>
               </div>
 
               <div className="relative mt-5">
@@ -578,8 +642,8 @@ export default function Home() {
 
       {isStoreWorkspaceOpen ? (
         <div className="fixed inset-0 z-30 flex bg-[rgba(24,21,18,0.58)] p-4 sm:p-6">
-          <div className="flex h-full w-full flex-col overflow-y-auto rounded-[32px] border border-[color:var(--border)] bg-[color:var(--surface-strong)] p-5 shadow-[0_40px_100px_-40px_rgba(0,0,0,0.28)] sm:p-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="mx-auto flex h-full w-full max-w-[1320px] flex-col overflow-y-auto rounded-[32px] border border-[color:var(--border)] bg-[color:var(--surface-strong)] p-5 shadow-[0_40px_100px_-40px_rgba(0,0,0,0.28)] sm:p-6">
+            <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
               <div className="min-w-0 sm:flex-1">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
                   Store details
@@ -600,9 +664,9 @@ export default function Home() {
               </button>
             </div>
 
-            <div className="mt-5 grid min-h-0 flex-1 gap-4 2xl:grid-cols-[minmax(0,1.15fr)_360px]">
+            <div className="mt-5 grid min-h-0 flex-1 gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
               <div className="flex min-h-0 flex-col rounded-[28px] border border-[color:var(--border)] bg-[color:var(--surface-soft)] p-5">
-                <div className="flex flex-wrap gap-2">
+                <div className="grid gap-2 sm:grid-cols-2 2xl:grid-cols-4">
                   {tabs.map((tab) => (
                     <button
                       key={tab.id}
@@ -619,7 +683,7 @@ export default function Home() {
                   ))}
                 </div>
 
-                <div className="mt-5 flex min-h-0 flex-1 flex-col rounded-[24px] border border-dashed border-[color:var(--border)] bg-[color:var(--surface-strong)] p-5">
+                <div className="mt-5 flex min-h-[280px] flex-1 flex-col rounded-[24px] border border-dashed border-[color:var(--border)] bg-[color:var(--surface-strong)] p-5">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
                     {activeTabMeta.label}
                   </p>
@@ -632,7 +696,7 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="grid gap-4 content-start">
+              <div className="grid content-start gap-4 xl:self-start">
                 <div className="rounded-[26px] border border-[color:var(--border)] bg-[color:var(--surface-soft)] p-5">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
                     Location on map
@@ -657,13 +721,13 @@ export default function Home() {
                   </button>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-1">
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
                   <div className="rounded-[26px] border border-[color:var(--border)] bg-[color:var(--surface-soft)] p-5">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
                       Missed calls
                     </p>
                     <p className="mt-3 text-3xl font-semibold text-[color:var(--foreground)]">
-                      --
+                      {selectedStore?.missedCalls ?? 0}
                     </p>
                     <p className="mt-3 text-sm leading-6 text-[color:var(--muted-strong)]">
                       Total missed calls for this location.
@@ -675,7 +739,7 @@ export default function Home() {
                       Average call duration
                     </p>
                     <p className="mt-3 text-3xl font-semibold text-[color:var(--foreground)]">
-                      --
+                      {selectedStore?.averageCallDurationLabel ?? "--"}
                     </p>
                     <p className="mt-3 text-sm leading-6 text-[color:var(--muted-strong)]">
                       Average duration for completed calls to this store.
@@ -688,7 +752,7 @@ export default function Home() {
                     Pending calls
                   </p>
                   <p className="mt-3 text-3xl font-semibold text-[color:var(--foreground)]">
-                    {queuedCallLabel ? "1" : "--"}
+                    {pendingCallsTotal}
                   </p>
                   <button
                     type="button"
@@ -703,7 +767,7 @@ export default function Home() {
                         Next pending call
                       </p>
                       <p className="mt-2 text-sm text-[color:var(--muted-strong)]">
-                        {queuedCallLabel ?? "Not available yet"}
+                        {queuedCallLabel ?? selectedStore?.nextPendingCallLabel ?? "Not scheduled"}
                       </p>
                     </div>
                     <div className="rounded-[20px] border border-[color:var(--border)] bg-[color:var(--surface-strong)] px-4 py-3">
@@ -711,7 +775,9 @@ export default function Home() {
                         Pending call window
                       </p>
                       <p className="mt-2 text-sm text-[color:var(--muted-strong)]">
-                        {queuedCallLabel ? "Within the next hour" : "Not available yet"}
+                        {queuedCallLabel
+                          ? "Within the next hour"
+                          : selectedStore?.pendingCallWindowLabel ?? "No pending calls scheduled"}
                       </p>
                     </div>
                   </div>
