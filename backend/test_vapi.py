@@ -78,24 +78,38 @@ def poll_call_status(call_id):
     print("[*] (Monitoring status...)\n")
 
     last_status = None
+    last_message_count = 0
+
     while True:
         response = requests.get(f"{BASE_URL}/call/{call_id}", headers=HEADERS)
         if response.status_code != 200:
-            print(f"[!] Error polling status: {response.text}")
+            print(f"\n[!] Error polling status: {response.text}")
             break
 
         data = response.json()
         status = data.get("status")
 
         if status != last_status:
-            print(f"[Status] {status.capitalize()}")
+            print(f"\n[Status] {status.capitalize()}")
             last_status = status
 
+        messages = data.get("messages", [])
+        if messages and len(messages) > last_message_count:
+            for msg in messages[last_message_count:]:
+                role = msg.get("role", "unknown")
+                # Depending on the schema, text might be in 'message', 'text', or 'content'
+                text = msg.get("message") or msg.get("content") or msg.get("text") or ""
+                # Vapi sometimes includes non-conversation messages; filter for actual chat
+                if role in ["user", "assistant", "bot", "customer"] and text:
+                    print(f"\n{role.capitalize()}: {text}")
+            last_message_count = len(messages)
+
         if status in ["ended", "completed", "failed"]:
-            print("\n" + "=" * 50)
+            print("\n\n" + "=" * 50)
             print(" FINAL TRANSCRIPT ")
             print("=" * 50)
-            print(data.get("transcript", "No transcript available."))
+            final_transcript = data.get("transcript", "")
+            print(final_transcript if final_transcript else "No transcript available.")
             print("=" * 50)
             break
 
