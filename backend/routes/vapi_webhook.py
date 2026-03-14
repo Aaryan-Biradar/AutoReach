@@ -3,6 +3,8 @@ import logging
 from fastapi import APIRouter
 from pydantic import BaseModel
 
+from services.langchain_agent import get_agent_response
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
@@ -21,6 +23,18 @@ class VapiResponse(BaseModel):
     response: str
 
 
+@router.get("/api/rag/test")
+async def test_rag(q: str = "objection handling"):
+    from services.rag_retriever import retrieve_context, _get_store
+
+    store = _get_store()
+    return {
+        "vector_count": store.count(),
+        "query": q,
+        "results": retrieve_context(q, top_k=4),
+    }
+
+
 @router.post("/vapi/webhook", response_model=VapiResponse)
 async def vapi_webhook(req: VapiRequest):
     logger.info(
@@ -28,10 +42,13 @@ async def vapi_webhook(req: VapiRequest):
         len(req.message),
     )
 
-    # TODO(Person 2): Replace this placeholder with the LangChain agent call.
-    # Pass req.message (the full conversation history) to the LangChain agent,
-    # which will optionally search RAG, call GPT-4, and return the next
-    # response for the voice agent to speak.
-    return VapiResponse(
-        response="Thanks for calling! We're still setting up our AI agent."
-    )
+    try:
+        conversation = [{"role": m.role, "content": m.content} for m in req.message]
+        response_text = await get_agent_response(conversation)
+        logger.info("Agent response: %s", response_text[:200])
+        return VapiResponse(response=response_text)
+    except Exception:
+        logger.exception("Agent error — returning fallback response")
+        return VapiResponse(
+            response="I appreciate your time. Could you hold on just one moment?"
+        )

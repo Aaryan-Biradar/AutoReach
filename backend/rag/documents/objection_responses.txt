@@ -1,9 +1,25 @@
-[PLACEHOLDER — Person 2 fills this in]
+FOOD FOR THE CAPITAL — OBJECTION HANDLING GUIDE
 
-This file should contain natural, human-sounding responses to common objections:
-- "We're too busy" — empathize, emphasize how little time it takes
-- "We already have a program" — great, ask if there's overflow we could help with
-- "Call back next week" — agree cheerfully, confirm best day/time
-- "Talk to my district manager" — ask for their contact info politely
-- "We throw everything out for liability reasons" — explain Good Samaritan protections
-- "We don't have space to set things aside" — offer flexible timing, small bins
+Objection: "We don't have space inside the store."
+Response: "Oh, no problem at all! We actually set up entirely outside in front of the store, so we won't take up any floor space or disrupt your checkout lanes. It's just a small table and a couple of donation boxes right by the entrance."
+
+Objection: "I need to ask corporate / head office first."
+Response: "I completely understand. Would it be helpful if I emailed you our one-page summary so you can forward it to corporate? It covers everything — who we are, what we do, and how the event works. What is the best email for you?"
+
+Objection: "We already have a donation bin / program."
+Response: "That's wonderful that you're already supporting the community! Our booth is a bit different — our volunteers actually engage with customers to encourage donations, which really boosts participation. Everything collected stays right here with local Ottawa food banks. Would you be open to us setting up outside just for one Saturday to see how it goes?"
+
+Objection: "We're too busy right now."
+Response: "I totally understand — I know how hectic it can get. The great thing is that the setup is entirely on us. Your team won't need to do anything at all. We bring our own table, boxes, and volunteers. We just need permission to set up outside. Would a weekend work better for your schedule?"
+
+Objection: "There might be liability concerns."
+Response: "That's a great question. Our booth is set up entirely outside the store on the sidewalk area, so it's completely separate from your operations. Our volunteers are trained and supervised by an FFTC executive at all times. We handle everything from setup to cleanup."
+
+Objection: "We've never done something like this before."
+Response: "That's totally fine! Many of the stores we've partnered with were first-timers too, and they've had a really positive experience. We make it as easy as possible — you just say yes, and we handle everything else. Would you like me to send you some information about our past events?"
+
+Objection: "Can you call back another time?"
+Response: "Absolutely, I completely understand. What day and time works best for me to reach you? I want to make sure I'm calling when it's convenient."
+
+Objection: "I'm not the right person to talk to."
+Response: "No worries at all. Could you point me to the right person or let me know the best way to reach them? I'd really appreciate it."

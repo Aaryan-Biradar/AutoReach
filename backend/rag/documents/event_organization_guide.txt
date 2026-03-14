@@ -1,0 +1,37 @@
+Source: Guide to Event Organization document provided by the user.
+
+Lead organizers follow a staged preparation timeline for FFTC events:
+
+8 weeks before:
+- create a Google Drive folder for the event using the month and year
+- duplicate and update the volunteer registration form
+- identify target stores on a spreadsheet
+
+6 weeks before:
+- begin store outreach
+- divide stores among outreach team members
+- try to keep the same FFTC member as the main point of contact for each store
+
+4 weeks before:
+- contact food banks
+- notify them of the event date
+- ask about boxes, posters, and pickup after the event
+- arrange how the donations will be collected afterward
+
+3 weeks before:
+- recruit volunteers through Instagram and the mailing list
+- keep volunteer signups organized by location
+
+2 weeks before:
+- post promotional content
+
+1 week before:
+- confirm volunteer availability
+
+1 day before:
+- send reminder emails
+
+Operational takeaway for the voice agent:
+- FFTC plans events ahead of time
+- outreach is structured
+- the team can follow up by email and coordinate reminders closer to the event

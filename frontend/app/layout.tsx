@@ -14,7 +14,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "AutoReach Dashboard",
-  description: "Frontend for AutoReach, a tool to automate outreach on LinkedIn and Twitter. Built with Next.js and TypeScript.",
+  description:
+    "Frontend for AutoReach, a tool to automate outreach on LinkedIn and Twitter. Built with Next.js and TypeScript.",
 };
 
 export default function RootLayout({

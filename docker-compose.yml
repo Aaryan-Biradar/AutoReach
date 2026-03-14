@@ -17,10 +17,17 @@ services:
       - "8000:8000"
     depends_on:
       - db
-    env_file: .env
+    env_file:
+      - .env
+      - ./backend/.env
+    volumes:
+      - chroma_data:/app/chroma_db
 
   #  Next.js frontend  
   frontend:
     build: ./frontend
     ports:
       - "3000:3000"
+
+volumes:
+  chroma_data:
