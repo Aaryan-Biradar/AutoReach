@@ -1,47 +1,28 @@
 import logging
 import os
 
-import openai
-from railtracks.rag import TextChunkingService
-from railtracks.vector_stores import ChromaVectorStore
+from railtracks.vector_stores.chroma import ChromaVectorStore
+from railtracks.vector_stores.chunking.base_chunker import Chunk
+from railtracks.vector_stores.chunking.fixed_token_chunker import FixedTokenChunker
+from railtracks.rag.embedding_service import EmbeddingService
 
 logger = logging.getLogger(__name__)
 
-_client: openai.OpenAI | None = None
-_store: ChromaVectorStore | None = None
+embedding_function = EmbeddingService().embed
 
+store = ChromaVectorStore(
+    collection_name="fftc_docs",
+    embedding_function=embedding_function,
+    path=os.path.join(os.path.dirname(__file__), "..", "chroma_db"),
+)
 
-def _get_client() -> openai.OpenAI:
-    global _client
-    if _client is None:
-        _client = openai.OpenAI()
-    return _client
-
-
-def _get_store() -> ChromaVectorStore:
-    global _store
-    if _store is None:
-        _store = ChromaVectorStore(
-            collection_name="fftc_docs",
-            embedding_function=_embed_texts,
-            path=os.path.join(os.path.dirname(__file__), "..", "chroma_db"),
-        )
-    return _store
-
-
-def _embed_texts(texts: list[str]) -> list[list[float]]:
-    response = _get_client().embeddings.create(model="text-embedding-3-small", input=texts)
-    return [item.embedding for item in response.data]
+chunker = FixedTokenChunker(chunk_size=500, overlap=50)
 
 
 def retrieve_context(query: str, top_k: int = 4) -> list[str]:
     """Search the vector store and return the top-k most relevant text chunks."""
-    store = _get_store()
     results = store.search(query, top_k=top_k)
-    chunks = [result.content for result in results]
-    logger.info("retrieve_context(%r) -> %d chunks, first 80 chars each: %s",
-                query, len(chunks), [c[:80] for c in chunks])
-    return chunks
+    return [result.content for result in results]
 
 
 def ingest_documents(directory: str) -> None:
@@ -49,21 +30,14 @@ def ingest_documents(directory: str) -> None:
 
     Skips entirely if the store already contains documents.
     """
-    store = _get_store()
-
-    count = store.count()
-    if count > 0:
-        logger.info("Vector store already populated (%d vectors) — skipping ingestion.", count)
-        print(f"[RAG] Vector store already populated ({count} vectors) — skipping ingestion.", flush=True)
+    if store.count() > 0:
+        logger.info(
+            "Vector store already populated (%d vectors) — skipping ingestion.",
+            store.count(),
+        )
         return
 
-    chunker = TextChunkingService(
-        chunk_size=500,
-        chunk_overlap=50,
-        strategy=TextChunkingService.chunk_by_token,
-    )
-
-    total_chunks = 0
+    all_chunks: list[Chunk] = []
     for filename in sorted(os.listdir(directory)):
         if not filename.endswith(".txt"):
             continue
@@ -73,10 +47,15 @@ def ingest_documents(directory: str) -> None:
         if not text:
             continue
 
-        chunks = chunker.chunk(text)
-        store.upsert(chunks)
-        total_chunks += len(chunks)
-        logger.info("Ingested %s → %d chunks", filename, len(chunks))
+        text_chunks = chunker.split_text(text)
+        for tc in text_chunks:
+            all_chunks.append(
+                Chunk(content=tc, document=filename, metadata={"source": filename})
+            )
+        logger.info("Chunked %s → %d chunks", filename, len(text_chunks))
 
-    logger.info("Ingestion complete: %d total chunks from %s", total_chunks, directory)
-    print(f"[RAG] Ingestion complete: {total_chunks} total chunks from {directory}", flush=True)
+    if all_chunks:
+        store.upsert(all_chunks)
+        logger.info("Ingestion complete: %d total chunks", len(all_chunks))
+    else:
+        logger.warning("No chunks to ingest — check RAG document directory.")
