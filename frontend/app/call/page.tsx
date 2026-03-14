@@ -24,139 +24,141 @@ function AIOrb({ active }: { active: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const frameRef = useRef<number>(0);
   const activeRef = useRef(false);
-  activeRef.current = active;
-
-  const draw = useCallback((time: number) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const dpr = window.devicePixelRatio || 1;
-    const size = ORB_SIZE;
-    if (canvas.width !== size * dpr) {
-      canvas.width = size * dpr;
-      canvas.height = size * dpr;
-      ctx.scale(dpr, dpr);
-    }
-
-    const cx = size / 2;
-    const cy = size / 2;
-    const t = time / 1000;
-    const isActive = activeRef.current;
-
-    ctx.clearRect(0, 0, size, size);
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(cx, cy, RADIUS, 0, Math.PI * 2);
-    ctx.closePath();
-    ctx.clip();
-
-    ctx.fillStyle = "#0e0b1a";
-    ctx.fillRect(0, 0, size, size);
-
-    const speedMul = isActive ? 1.6 : 1;
-    const blobs = [
-      { color: [147, 51, 234], rx: 0.7, ry: 0.9, spX: 0.4, spY: 0.3, phX: 0, phY: 2, r: 70 },
-      { color: [59, 130, 246], rx: 0.8, ry: 0.6, spX: 0.3, spY: 0.5, phX: 1.5, phY: 0.8, r: 65 },
-      { color: [192, 132, 252], rx: 0.5, ry: 0.7, spX: 0.5, spY: 0.25, phX: 3, phY: 4, r: 55 },
-      { color: [99, 102, 241], rx: 0.6, ry: 0.5, spX: 0.35, spY: 0.45, phX: 5, phY: 1, r: 50 },
-    ];
-
-    for (const b of blobs) {
-      const bx = cx + Math.sin(t * b.spX * speedMul + b.phX) * RADIUS * b.rx * 0.5;
-      const by = cy + Math.cos(t * b.spY * speedMul + b.phY) * RADIUS * b.ry * 0.5;
-      const grad = ctx.createRadialGradient(bx, by, 0, bx, by, b.r);
-      grad.addColorStop(0, `rgba(${b.color[0]},${b.color[1]},${b.color[2]},0.8)`);
-      grad.addColorStop(0.6, `rgba(${b.color[0]},${b.color[1]},${b.color[2]},0.2)`);
-      grad.addColorStop(1, `rgba(${b.color[0]},${b.color[1]},${b.color[2]},0)`);
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, size, size);
-    }
-
-    ctx.globalAlpha = 0.5;
-    for (let i = 0; i < 5; i++) {
-      const aOff = (i / 5) * Math.PI * 2;
-      const sweep = 0.8 + Math.sin(t * 0.6 + i) * 0.4;
-      const startA = t * (0.3 + i * 0.08) * speedMul + aOff;
-      const pr = RADIUS * (0.45 + i * 0.08);
-      ctx.beginPath();
-      ctx.arc(cx, cy, pr, startA, startA + sweep);
-      ctx.strokeStyle = `rgba(200,180,255,${0.25 + Math.sin(t + i) * 0.15})`;
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-    }
-    ctx.globalAlpha = 1;
-
-    for (let i = 0; i < 20; i++) {
-      const a = t * (0.15 + i * 0.03) + i * 1.25;
-      const dr = RADIUS * (0.25 + (i % 7) * 0.09);
-      const sx = cx + Math.cos(a) * dr;
-      const sy = cy + Math.sin(a) * dr;
-      const sparkleAlpha = 0.3 + Math.sin(t * 2 + i * 0.8) * 0.3;
-      ctx.beginPath();
-      ctx.arc(sx, sy, 1.2, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(255,255,255,${sparkleAlpha})`;
-      ctx.fill();
-    }
-
-    // Voice waveform ring
-    const WAVE_BARS = 80;
-    const WAVE_INNER = RADIUS - 18;
-    const WAVE_MAX = isActive ? 18 : 14;
-    const envelope = isActive
-      ? 0.6 + Math.sin(t * 1.6) * 0.2 + Math.sin(t * 2.9) * 0.15 + Math.abs(Math.sin(t * 0.7)) * 0.1
-      : 0.55 + Math.sin(t * 1.6) * 0.2 + Math.sin(t * 2.9) * 0.15 + Math.abs(Math.sin(t * 0.7)) * 0.1;
-
-    for (let i = 0; i < WAVE_BARS; i++) {
-      const angle = (i / WAVE_BARS) * Math.PI * 2 - Math.PI / 2;
-      const noise =
-        Math.sin(t * 8 + i * 0.9) * 0.3 +
-        Math.sin(t * 12.5 + i * 1.7) * 0.3 +
-        Math.sin(t * 5.3 + i * 2.4) * 0.4;
-      const barH = Math.max(2, ((noise + 1) / 2) * WAVE_MAX * envelope);
-      const x1 = cx + Math.cos(angle) * WAVE_INNER;
-      const y1 = cy + Math.sin(angle) * WAVE_INNER;
-      const x2 = cx + Math.cos(angle) * (WAVE_INNER - barH);
-      const y2 = cy + Math.sin(angle) * (WAVE_INNER - barH);
-      const barAlpha = 0.4 + envelope * 0.5;
-      ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
-      ctx.strokeStyle = `rgba(192,132,252,${barAlpha})`;
-      ctx.lineWidth = 2;
-      ctx.lineCap = "round";
-      ctx.stroke();
-    }
-
-    ctx.restore();
-
-    ctx.beginPath();
-    ctx.arc(cx, cy, RADIUS, 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(147,51,234,0.3)";
-    ctx.lineWidth = 2;
-    ctx.shadowColor = "#9333ea";
-    ctx.shadowBlur = 20;
-    ctx.stroke();
-    ctx.shadowColor = "transparent";
-    ctx.shadowBlur = 0;
-
-    const hlGrad = ctx.createRadialGradient(cx - 30, cy - 35, 2, cx - 20, cy - 25, 45);
-    hlGrad.addColorStop(0, "rgba(255,255,255,0.12)");
-    hlGrad.addColorStop(1, "rgba(255,255,255,0)");
-    ctx.fillStyle = hlGrad;
-    ctx.beginPath();
-    ctx.arc(cx, cy, RADIUS, 0, Math.PI * 2);
-    ctx.fill();
-
-    frameRef.current = requestAnimationFrame(draw);
-  }, []);
 
   useEffect(() => {
+    activeRef.current = active;
+  }, [active]);
+
+  useEffect(() => {
+    function draw(time: number) {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      const dpr = window.devicePixelRatio || 1;
+      const size = ORB_SIZE;
+      if (canvas.width !== size * dpr) {
+        canvas.width = size * dpr;
+        canvas.height = size * dpr;
+        ctx.scale(dpr, dpr);
+      }
+
+      const cx = size / 2;
+      const cy = size / 2;
+      const t = time / 1000;
+      const isActive = activeRef.current;
+
+      ctx.clearRect(0, 0, size, size);
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cx, cy, RADIUS, 0, Math.PI * 2);
+      ctx.closePath();
+      ctx.clip();
+
+      ctx.fillStyle = "#0e0b1a";
+      ctx.fillRect(0, 0, size, size);
+
+      const speedMul = isActive ? 1.6 : 1;
+      const blobs = [
+        { color: [147, 51, 234], rx: 0.7, ry: 0.9, spX: 0.4, spY: 0.3, phX: 0, phY: 2, r: 70 },
+        { color: [59, 130, 246], rx: 0.8, ry: 0.6, spX: 0.3, spY: 0.5, phX: 1.5, phY: 0.8, r: 65 },
+        { color: [192, 132, 252], rx: 0.5, ry: 0.7, spX: 0.5, spY: 0.25, phX: 3, phY: 4, r: 55 },
+        { color: [99, 102, 241], rx: 0.6, ry: 0.5, spX: 0.35, spY: 0.45, phX: 5, phY: 1, r: 50 },
+      ];
+
+      for (const b of blobs) {
+        const bx = cx + Math.sin(t * b.spX * speedMul + b.phX) * RADIUS * b.rx * 0.5;
+        const by = cy + Math.cos(t * b.spY * speedMul + b.phY) * RADIUS * b.ry * 0.5;
+        const grad = ctx.createRadialGradient(bx, by, 0, bx, by, b.r);
+        grad.addColorStop(0, `rgba(${b.color[0]},${b.color[1]},${b.color[2]},0.8)`);
+        grad.addColorStop(0.6, `rgba(${b.color[0]},${b.color[1]},${b.color[2]},0.2)`);
+        grad.addColorStop(1, `rgba(${b.color[0]},${b.color[1]},${b.color[2]},0)`);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, size, size);
+      }
+
+      ctx.globalAlpha = 0.5;
+      for (let i = 0; i < 5; i++) {
+        const aOff = (i / 5) * Math.PI * 2;
+        const sweep = 0.8 + Math.sin(t * 0.6 + i) * 0.4;
+        const startA = t * (0.3 + i * 0.08) * speedMul + aOff;
+        const pr = RADIUS * (0.45 + i * 0.08);
+        ctx.beginPath();
+        ctx.arc(cx, cy, pr, startA, startA + sweep);
+        ctx.strokeStyle = `rgba(200,180,255,${0.25 + Math.sin(t + i) * 0.15})`;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+
+      for (let i = 0; i < 20; i++) {
+        const a = t * (0.15 + i * 0.03) + i * 1.25;
+        const dr = RADIUS * (0.25 + (i % 7) * 0.09);
+        const sx = cx + Math.cos(a) * dr;
+        const sy = cy + Math.sin(a) * dr;
+        const sparkleAlpha = 0.3 + Math.sin(t * 2 + i * 0.8) * 0.3;
+        ctx.beginPath();
+        ctx.arc(sx, sy, 1.2, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,255,255,${sparkleAlpha})`;
+        ctx.fill();
+      }
+
+      const waveBars = 80;
+      const waveInner = RADIUS - 18;
+      const waveMax = isActive ? 18 : 14;
+      const envelope = isActive
+        ? 0.6 + Math.sin(t * 1.6) * 0.2 + Math.sin(t * 2.9) * 0.15 + Math.abs(Math.sin(t * 0.7)) * 0.1
+        : 0.55 + Math.sin(t * 1.6) * 0.2 + Math.sin(t * 2.9) * 0.15 + Math.abs(Math.sin(t * 0.7)) * 0.1;
+
+      for (let i = 0; i < waveBars; i++) {
+        const angle = (i / waveBars) * Math.PI * 2 - Math.PI / 2;
+        const noise =
+          Math.sin(t * 8 + i * 0.9) * 0.3 +
+          Math.sin(t * 12.5 + i * 1.7) * 0.3 +
+          Math.sin(t * 5.3 + i * 2.4) * 0.4;
+        const barH = Math.max(2, ((noise + 1) / 2) * waveMax * envelope);
+        const x1 = cx + Math.cos(angle) * waveInner;
+        const y1 = cy + Math.sin(angle) * waveInner;
+        const x2 = cx + Math.cos(angle) * (waveInner - barH);
+        const y2 = cy + Math.sin(angle) * (waveInner - barH);
+        const barAlpha = 0.4 + envelope * 0.5;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.strokeStyle = `rgba(192,132,252,${barAlpha})`;
+        ctx.lineWidth = 2;
+        ctx.lineCap = "round";
+        ctx.stroke();
+      }
+
+      ctx.restore();
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, RADIUS, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(147,51,234,0.3)";
+      ctx.lineWidth = 2;
+      ctx.shadowColor = "#9333ea";
+      ctx.shadowBlur = 20;
+      ctx.stroke();
+      ctx.shadowColor = "transparent";
+      ctx.shadowBlur = 0;
+
+      const hlGrad = ctx.createRadialGradient(cx - 30, cy - 35, 2, cx - 20, cy - 25, 45);
+      hlGrad.addColorStop(0, "rgba(255,255,255,0.12)");
+      hlGrad.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = hlGrad;
+      ctx.beginPath();
+      ctx.arc(cx, cy, RADIUS, 0, Math.PI * 2);
+      ctx.fill();
+
+      frameRef.current = requestAnimationFrame(draw);
+    }
+
     frameRef.current = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(frameRef.current);
-  }, [draw]);
+  }, []);
 
   return (
     <canvas ref={canvasRef} style={{ width: ORB_SIZE, height: ORB_SIZE }} />

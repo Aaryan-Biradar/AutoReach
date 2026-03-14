@@ -13,8 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "FoodFlow — AI Outreach for Food Banks",
-  description: "AI-powered voice outreach platform for Food for the Capital. Automatically calls grocery stores to set up food donation booths.",
+  title: "AutoReach Dashboard",
+  description:
+    "Frontend for AutoReach, a tool to automate outreach on LinkedIn and Twitter. Built with Next.js and TypeScript.",
 };
 
 export default function RootLayout({
