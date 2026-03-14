@@ -41,9 +41,6 @@ async def chat_completions(request: Request):
     body = await request.json()
     messages = body.get("messages", [])
     logger.info("/chat/completions — %d messages received", len(messages))
-    # #region agent log
-    _dbg("H2", "vapi_webhook.py:chat_completions:entry", "chat_completions called", {"num_messages": len(messages), "roles": [m.get("role","") for m in messages[:5]]})
-    # #endregion
 
     conversation: list[dict] = []
     for m in messages:
@@ -57,21 +54,11 @@ async def chat_completions(request: Request):
     if not conversation:
         conversation = [{"role": "user", "content": "Hello"}]
 
-    # #region agent log
-    _dbg("H2", "vapi_webhook.py:chat_completions:conv", "conversation built", {"num_turns": len(conversation), "last_content": conversation[-1]["content"][:100] if conversation else ""})
-    # #endregion
-
     t0 = time.time()
     try:
         response_text = await get_agent_response(conversation)
-        # #region agent log
-        _dbg("H3", "vapi_webhook.py:chat_completions:agent_ok", "agent responded", {"elapsed_ms": int((time.time()-t0)*1000), "response_preview": response_text[:200]})
-        # #endregion
-    except Exception as exc:
+    except Exception:
         logger.exception("Agent error in /chat/completions")
-        # #region agent log
-        _dbg("H3", "vapi_webhook.py:chat_completions:agent_err", "agent EXCEPTION", {"elapsed_ms": int((time.time()-t0)*1000), "error": str(exc)[:300]})
-        # #endregion
         response_text = "I appreciate your time. Could you hold on just one moment?"
 
     elapsed = int((time.time() - t0) * 1000)
@@ -139,10 +126,6 @@ async def vapi_webhook(request: Request):
     call_id = message.get("call", {}).get("id")
 
     logger.info("Vapi webhook — type=%s call=%s", msg_type, call_id)
-
-    # #region agent log
-    _dbg("H5", "vapi_webhook.py:webhook:recv", "webhook event received", {"type": msg_type, "call_id": call_id})
-    # #endregion
 
     if call_id and msg_type in ("transcript", "status-update", "end-of-call-report", "conversation-update"):
         push_event(call_id, message)
