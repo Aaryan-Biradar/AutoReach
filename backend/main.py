@@ -1,3 +1,4 @@
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -7,11 +8,14 @@ from database import create_tables
 from routes.dashboard import router as dashboard_router
 from routes.vapi_webhook import router as vapi_router
 from routes.vapi_calls import router as vapi_calls_router
+from services.rag_retriever import ingest_documents
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     create_tables()
+    rag_dir = os.path.join(os.path.dirname(__file__), "rag", "documents")
+    ingest_documents(rag_dir)
     yield
 
 

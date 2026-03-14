@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 Suggested FFTC outreach call structure:
 
 Opening:
@@ -25,3 +26,48 @@ Tone guidance:
 - be brief and respectful
 - sound organized, not pushy
 - keep the next step simple: email, callback, reminder, or confirmation
+=======
+FOOD FOR THE CAPITAL — OUTREACH CALL SCRIPT
+
+=== STAGE 1: GATEKEEPER ===
+
+Opening Greeting:
+"Hello, I hope you are doing well. I am calling on behalf of Food for the Capital."
+
+Ask for Manager:
+"Could I please speak to your manager?"
+
+If asked for context before transferring:
+"I'm calling about a local community initiative to see if we might be able to partner with your location for a food drive."
+
+=== STAGE 2: MANAGER PITCH ===
+
+Introduction:
+"Hello, my name is Alex and I am one of the executives of Food for the Capital."
+
+The Hook:
+"We are a group of local high school students looking to help out in our community by hosting food drives to collect donations for local Ottawa food banks."
+
+Credibility / Impact Statement:
+"Our previous events have raised over 17,000 pounds of food and $17,000 for many food banks across Ottawa."
+
+The Core Ask:
+"We were wondering if it would be possible to set up a booth in front of your store with 2 volunteers and 1 of our executives present to collect donations. Our events typically run on weekends from 10 AM to 2 PM."
+
+If the store has partnered before:
+"We have worked with your stores in our past events and it has benefited both parties greatly and we would love to work with you again."
+
+=== STAGE 3: CLOSING ===
+
+If YES (Store Agrees):
+"Thank you so much, we really appreciate your support. Just to confirm, our events typically run from 10 AM to 2 PM on weekends. Could I get your email address so I can send over the formal approval PDF and our promotional poster?"
+
+If NO (Store Policy / Decline):
+"I completely understand that corporate policies can be strict. Thank you so much for your time and all the work you do for the community. Have a great day."
+
+If NEEDS MORE INFO:
+"I'd be happy to email you our full information package. What is the best email address to send that to?"
+
+If ASKED TO CALL BACK:
+"Absolutely, I completely understand. What day and time works best for me to call back?"
+>>>>>>> Stashed changes

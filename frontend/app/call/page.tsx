@@ -165,12 +165,21 @@ function AIOrb({ active }: { active: boolean }) {
 
 // ── Transcript Panel ────────────────────────────────────────────────────
 
-function TranscriptPanel({ messages }: { messages: TranscriptMessage[] }) {
+function TranscriptPanel({
+  messages,
+  partial,
+}: {
+  messages: TranscriptMessage[];
+  partial: TranscriptMessage | null;
+}) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, partial]);
+
+  const allMessages = partial ? [...messages, partial] : messages;
+  const hasPartial = partial !== null;
 
   return (
     <div className="w-full max-w-md bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
@@ -183,24 +192,25 @@ function TranscriptPanel({ messages }: { messages: TranscriptMessage[] }) {
       </div>
 
       <div className="overflow-y-auto max-h-80 px-5 py-4 space-y-4">
-        {messages.length === 0 ? (
+        {allMessages.length === 0 ? (
           <p className="text-sm text-gray-400 text-center py-6">
             Transcript will appear once the call connects...
           </p>
         ) : (
-          messages.map((msg, i) => {
+          allMessages.map((msg, i) => {
             const isAgent = msg.role === "assistant" || msg.role === "bot";
-            const isLast = i === messages.length - 1;
+            const isLast = i === allMessages.length - 1;
+            const isPartialMsg = isLast && hasPartial;
             return (
-              <div key={i}>
+              <div key={i} className={isPartialMsg ? "opacity-60" : undefined}>
                 <div className="flex items-center gap-2 mb-1">
                   <span className={`text-xs font-semibold ${isAgent ? "text-purple-700" : "text-amber-600"}`}>
-                    {isAgent ? "Riley" : "Store Manager"}
+                    {isAgent ? "Alex" : "Store Manager"}
                   </span>
                 </div>
                 <p className="text-sm text-gray-700 leading-relaxed">
                   {msg.text}
-                  {isLast && isAgent && (
+                  {isLast && (
                     <span className="inline-block w-[2px] h-3.5 bg-purple-700 ml-0.5 align-middle animate-blink" />
                   )}
                 </p>
@@ -247,51 +257,73 @@ export default function CallPage() {
   const [status, setStatus] = useState<CallStatus>("idle");
   const [callId, setCallId] = useState<string | null>(null);
   const [messages, setMessages] = useState<TranscriptMessage[]>([]);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [partial, setPartial] = useState<TranscriptMessage | null>(null);
+  const esRef = useRef<EventSource | null>(null);
 
-  const stopPolling = useCallback(() => {
-    if (pollRef.current) {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
+  const closeStream = useCallback(() => {
+    if (esRef.current) {
+      esRef.current.close();
+      esRef.current = null;
     }
   }, []);
 
-  const pollCall = useCallback(
+  const openStream = useCallback(
     (id: string) => {
-      stopPolling();
-      pollRef.current = setInterval(async () => {
+      closeStream();
+      const es = new EventSource(`${API_URL}/api/calls/${id}/stream`);
+      esRef.current = es;
+
+      es.onmessage = (event) => {
         try {
-          const res = await fetch(`${API_URL}/api/calls/${id}/listen`);
-          if (!res.ok) return;
-          const data = await res.json();
+          const msg = JSON.parse(event.data);
+          const msgType = msg.type as string;
 
-          const vapiStatus = data.status as string;
-          if (vapiStatus === "in-progress") setStatus("in-progress");
-          else if (vapiStatus === "ringing") setStatus("ringing");
-          else if (vapiStatus === "queued") setStatus("queued");
-          else if (vapiStatus === "ended" || vapiStatus === "completed" || vapiStatus === "failed") {
+          if (msgType === "transcript") {
+            const role = msg.role as string;
+            const text = msg.transcript as string;
+            const transcriptType = msg.transcriptType as string;
+
+            if (transcriptType === "final") {
+              setPartial(null);
+              setMessages((prev) => [...prev, { role, text }]);
+            } else {
+              setPartial({ role, text });
+            }
+          } else if (msgType === "status-update") {
+            const vapiStatus = msg.status as string;
+            if (vapiStatus === "in-progress") setStatus("in-progress");
+            else if (vapiStatus === "ringing") setStatus("ringing");
+            else if (vapiStatus === "queued") setStatus("queued");
+            else if (["ended", "completed", "failed", "canceled"].includes(vapiStatus)) {
+              setStatus("ended");
+              setPartial(null);
+              closeStream();
+            }
+          } else if (msgType === "end-of-call-report") {
             setStatus("ended");
-            stopPolling();
-          }
-
-          if (data.messages && data.messages.length > 0) {
-            setMessages(data.messages);
+            setPartial(null);
+            closeStream();
           }
         } catch {
-          // Network error, keep polling
+          // malformed SSE payload, ignore
         }
-      }, 2000);
+      };
+
+      es.onerror = () => {
+        closeStream();
+      };
     },
-    [stopPolling],
+    [closeStream],
   );
 
   useEffect(() => {
-    return () => stopPolling();
-  }, [stopPolling]);
+    return () => closeStream();
+  }, [closeStream]);
 
   const handleStart = async () => {
     setStatus("starting");
     setMessages([]);
+    setPartial(null);
     setCallId(null);
     try {
       const res = await fetch(`${API_URL}/api/calls/start`, {
@@ -308,7 +340,7 @@ export default function CallPage() {
       const data = await res.json();
       setCallId(data.call_id);
       setStatus(data.status === "queued" ? "queued" : "ringing");
-      pollCall(data.call_id);
+      openStream(data.call_id);
     } catch (err) {
       console.error("[start call]", err);
       setStatus("idle");
@@ -330,7 +362,7 @@ export default function CallPage() {
             </span>
           )}
         </div>
-        <TranscriptPanel messages={messages} />
+        <TranscriptPanel messages={messages} partial={partial} />
       </div>
 
       <div className="flex flex-col items-center gap-2">

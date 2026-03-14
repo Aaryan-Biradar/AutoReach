@@ -1,10 +1,13 @@
 # Start from an official Python base image
 FROM python:3.11-slim
 
+# Install build tools needed by native extensions (uvloop, etc.)
+RUN apt-get update && apt-get install -y --no-install-recommends gcc build-essential && rm -rf /var/lib/apt/lists/*
+
 # Set the working directory inside the container
 WORKDIR /app
 
-# Copy dependency files first (this is a caching trick — 
+# Copy dependency files first (this is a caching trick —
 # Docker won't reinstall packages unless these files change)
 COPY pyproject.toml .
 

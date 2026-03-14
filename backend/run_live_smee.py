@@ -1,3 +1,4 @@
+import asyncio
 import os
 import sys
 import json
@@ -7,6 +8,8 @@ import requests
 
 from vapi import Vapi
 from vapi.types import CreateCustomerDto, AssistantOverrides, Server, Call as VapiCall
+
+from services.smee import get_smee_url as _async_get_smee_url
 
 # ─── Load .env ─────────────────────────────────────────────────
 env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
@@ -30,12 +33,10 @@ if not VAPI_PRIVATE_KEY or not CUSTOMER_PHONE_NUMBER:
 call_active = True
 call_id = None
 
-def get_smee_url():
-    resp = requests.get("https://smee.io/new", allow_redirects=False)
-    if resp.status_code in (301, 302):
-        return resp.headers["Location"]
-    resp = requests.head("https://smee.io/new", allow_redirects=True)
-    return resp.url
+
+def get_smee_url() -> str:
+    """Thin sync wrapper around the shared async helper."""
+    return asyncio.run(_async_get_smee_url())
 
 
 def parse_sse_events(response):
@@ -59,7 +60,6 @@ def parse_sse_events(response):
                 event_type = line[len("event:"):].strip()
             elif line.startswith("data:"):
                 data_lines.append(line[len("data:"):].lstrip(" "))
-            # ignore comments (":") and other fields
 
 
 def process_message(message):
