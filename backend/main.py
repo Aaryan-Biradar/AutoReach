@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from database import create_tables
 from routes.dashboard import router as dashboard_router
 from routes.vapi_webhook import router as vapi_router
+from routes.vapi_calls import router as vapi_calls_router
 
 
 @asynccontextmanager
@@ -25,6 +26,7 @@ app.add_middleware(
 )
 
 app.include_router(dashboard_router, prefix="/api")
+app.include_router(vapi_calls_router, prefix="/api")
 app.include_router(vapi_router)
 
 
