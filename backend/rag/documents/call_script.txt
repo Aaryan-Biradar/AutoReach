@@ -1,0 +1,7 @@
+[PLACEHOLDER — Person 2 fills this in]
+
+This file should contain the full call script for the voice agent:
+- How the call opens (greeting, introducing yourself and Food for the Capital)
+- The core ask (arranging a recurring surplus food pickup)
+- How the call closes if the store agrees (confirm day/time, thank them)
+- How the call closes if the store declines (polite sign-off, leave door open)

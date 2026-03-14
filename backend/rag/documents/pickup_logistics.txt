@@ -1,0 +1,8 @@
+[PLACEHOLDER — Person 2 fills this in]
+
+This file should explain exactly how a pickup works from the store's perspective:
+- A trained volunteer arrives at a scheduled time
+- The store just sets aside items the night before
+- Pickups take about 15 minutes
+- We accept most non-expired food items
+- Cold chain is maintained with insulated bags/coolers

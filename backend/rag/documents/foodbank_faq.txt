@@ -1,0 +1,7 @@
+[PLACEHOLDER — Person 2 fills this in]
+
+This file should contain factual information about Food for the Capital:
+- What the organization does and who they serve
+- How many families/people they help (pull real numbers from foodforthecapital.ca)
+- What kinds of food they accept
+- Their mission, values, and community impact

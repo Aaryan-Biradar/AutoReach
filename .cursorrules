@@ -1,0 +1,336 @@
+# AutoReach — Project Context for Cursor AI
+
+## What this project is
+
+AutoReach is an AI-powered food rescue platform built for the GenAI Genesis Hackathon in Toronto. The project is inspired by Food for the Capital (foodforthecapital.ca), an Ottawa-based food bank organization.
+
+The core problem we are solving is this: food banks like Food for the Capital spend enormous amounts of time manually calling grocery store managers to arrange surplus food pickups. Most calls go unanswered. Emails get ignored. By the time a store agrees to donate, the food has sometimes already been thrown out. This coordination overhead burns out volunteers and coordinators, and it means less food reaches the families who need it.
+
+Our solution is a voice AI agent that automatically calls grocery store managers, has a real, intelligent conversation with them, handles objections naturally, and books a recurring surplus pickup — all without a human coordinator making a single call. The system also predicts which Ottawa neighbourhoods will see increased food insecurity demand, gives volunteers optimized pickup routes, and generates personalized impact reports for donors.
+
+The hackathon category we are targeting is "Best AI for Community Impact," sponsored by Google, which asks for the most innovative AI solution addressing environmental or sustainability challenges with meaningful real-world impact.
+
+---
+
+## The three-layer AI architecture
+
+Understanding how the AI works is essential for writing good code in this project. There are three distinct layers that work together in a loop during every phone call.
+
+**Vapi** is the telephony and audio layer. It physically dials phone numbers, streams audio in and out of the call in real time, transcribes what the store manager says into text using speech-to-text, and converts our agent's text responses back into speech using a voice model (ElevenLabs). Vapi does not contain any intelligence — it is purely infrastructure. Every time the manager finishes speaking, Vapi sends an HTTP POST request (a webhook) to our FastAPI backend containing the full conversation transcript so far. Our backend then replies with the next thing the agent should say, and Vapi speaks it. This loop repeats for every turn of the conversation.
+
+**LangChain** is the reasoning layer. It lives inside our FastAPI backend and receives the conversation transcript from the Vapi webhook. LangChain is a framework for building AI agents that can reason in steps and decide which tools to use. In our case, the agent decides whether it already knows enough to respond or whether it needs to search the knowledge base first. LangChain orchestrates the full reasoning cycle: receive message, optionally search RAG, construct a prompt with conversation history and retrieved context, call the language model (GPT-4), and return the response.
+
+**RAG (Retrieval Augmented Generation)** is the memory layer. It is a collection of documents we write ourselves — about Food for the Capital, how pickups work, answers to common objections, the tone and language the agent should use — stored in a vector database. These documents are chunked into small pieces, converted into numerical vector representations (embeddings) using OpenAI's embedding model, and stored in pgvector (which runs inside our existing PostgreSQL database). When LangChain needs to answer a specific question, it converts the manager's message into a vector too and finds the most semantically similar document chunks — meaning it finds relevant content by meaning, not just keyword matching. This retrieved context is then injected into the prompt so GPT-4 can give accurate, specific answers grounded in real information about our organization.
+
+The complete call loop works like this: manager speaks → Vapi transcribes → FastAPI webhook receives transcript → LangChain searches RAG if needed → GPT-4 generates response → FastAPI returns response to Vapi → Vapi speaks it → repeat.
+
+---
+
+## Tech stack
+
+The frontend is **Next.js 16** with **Tailwind CSS v4** and **TypeScript**. It lives in the `frontend/` folder.
+
+The backend is **FastAPI** (Python 3.14) with **uvicorn** as the server. It lives in the `backend/` folder. Package management uses **uv** (not pip) — to install packages use `uv add package-name`, and to run the server use `uv run uvicorn main:app --reload`.
+
+The database is **PostgreSQL 15** running in Docker, accessed via **SQLAlchemy** with **psycopg2-binary** as the driver. We also use **pgvector** as a PostgreSQL extension for storing and querying embeddings, which means we do not need a separate vector database like Pinecone.
+
+The AI stack uses **LangChain** for agent orchestration, **OpenAI** for both the language model (GPT-4) and embeddings, and **Vapi** for the voice calling infrastructure.
+
+Everything runs locally via **Docker Compose**. The `docker-compose.yml` at the project root defines three services: `db` (PostgreSQL), `backend` (FastAPI), and `frontend` (Next.js). The database host inside Docker is `db`, not `localhost`, because Docker's internal network routes by service name.
+
+---
+
+## Project structure
+
+```
+AutoReach/
+├── .cursorrules              ← you are reading this file
+├── .env                      ← secrets, never commit this
+├── docker-compose.yml        ← spins up db + backend + frontend
+├── pyrightconfig.json        ← points Pyright at the backend venv
+│
+├── frontend/                 ← Next.js app
+│   ├── app/
+│   │   ├── layout.tsx
+│   │   ├── page.tsx          ← main dashboard (map, call log, stats)
+│   │   └── globals.css
+│   ├── Dockerfile
+│   └── package.json
+│
+└── backend/                  ← FastAPI app
+    ├── main.py               ← entry point, FastAPI app instance lives here
+    ├── database.py           ← SQLAlchemy engine, Base, Call model
+    ├── Dockerfile
+    ├── pyproject.toml        ← Python dependencies managed by uv
+    └── .python-version       ← Python 3.14
+```
+
+The backend folder will grow as we build. The planned structure for new files is:
+
+```
+backend/
+├── routes/
+│   ├── vapi_webhook.py       ← receives Vapi's webhook, returns agent response
+│   └── dashboard.py          ← feeds data to the Next.js frontend
+├── services/
+│   ├── langchain_agent.py    ← LangChain agent + RAG retrieval logic
+│   └── rag_retriever.py      ← vector search against pgvector
+└── rag/
+    └── documents/            ← plain .txt files the agent knows about
+        ├── foodbank_faq.txt
+        ├── objection_responses.txt
+        ├── pickup_logistics.txt
+        └── call_script.txt
+```
+
+---
+
+## Database schema
+
+The `database.py` file defines the `Call` model using SQLAlchemy. Every outreach call the voice agent makes is logged as a row in this table. The columns are: `id` (String, primary key — use uuid4), `store_name` (String — e.g. "Loblaws Merivale"), `phone_number` (String), `called_at` (DateTime — when the call was made), `answered` (Boolean — did someone pick up?), `outcome` (String — one of "agreed", "callback", "rejected", "no_answer"), `pickup_scheduled` (Boolean), and `notes` (String — anything notable from the transcript).
+
+The database URL in the `.env` file is `postgresql://postgres:password@db:5432/autoreach`. The host is `db` when running inside Docker and `localhost` when running the backend directly on your machine.
+
+---
+
+## Environment variables
+
+All secrets live in the `.env` file at the project root. The variables are:
+
+`DATABASE_URL` — the PostgreSQL connection string (see above).
+`VAPI_API_KEY` — the Vapi API key for triggering calls and receiving webhooks.
+`OPENAI_API_KEY` — used by LangChain for both GPT-4 calls and generating embeddings for RAG.
+
+In Python, load these with `python-dotenv`. In the FastAPI app, use `os.getenv("VARIABLE_NAME")` after calling `load_dotenv()` at startup.
+
+---
+
+## How the Vapi webhook works
+
+This is the most critical piece of backend code to understand. When a call is in progress and the store manager finishes speaking, Vapi sends a POST request to our endpoint (we configure this URL in the Vapi dashboard). The request body is JSON and contains the full conversation history as a list of message objects, each with a `role` field ("assistant" or "user") and a `content` field containing the text.
+
+Our webhook endpoint at `routes/vapi_webhook.py` receives this, passes the conversation to the LangChain agent, and must return a JSON response in the format Vapi expects. The response format Vapi needs is:
+
+```json
+{
+  "response": "The text you want the agent to speak next."
+}
+```
+
+The entire round trip — from Vapi sending the webhook to our backend responding — must complete in under a couple of seconds or the call will feel unnatural. This means the LangChain agent and RAG search must be fast. Avoid any blocking I/O in the webhook handler; use FastAPI's async capabilities where possible.
+
+---
+
+## How RAG is set up
+
+The RAG knowledge base uses pgvector, which is a PostgreSQL extension that adds a vector column type and enables fast similarity search. To enable it, you run `CREATE EXTENSION IF NOT EXISTS vector;` once when setting up the database.
+
+The workflow for ingesting documents is: read the `.txt` files from `backend/rag/documents/`, split them into chunks (roughly 500 tokens each with some overlap), call OpenAI's `text-embedding-3-small` model to get a vector embedding for each chunk, and store each chunk along with its embedding in a `document_chunks` table in PostgreSQL.
+
+At query time, the LangChain agent converts the manager's message into an embedding using the same model, then queries the `document_chunks` table for the rows with the most similar vectors (using pgvector's `<->` cosine distance operator), and retrieves the top 3-5 most relevant chunks.
+
+LangChain has built-in support for pgvector via `langchain_postgres.PGVector`. Use this rather than writing raw SQL for the vector search.
+
+---
+
+## RAG documents
+
+The `backend/rag/documents/` folder contains plain text files that represent everything the voice agent knows. The quality of these documents directly determines how convincing the agent sounds on a call. These are the files that need to exist and what they should contain:
+
+`call_script.txt` — how the call opens, how the agent introduces itself and Food for the Capital, and how the call closes if a store agrees or declines.
+
+`foodbank_faq.txt` — what Food for the Capital does, who they serve, how many people they help, what kinds of food they accept, their mission and values. Pull real information from foodforthecapital.ca.
+
+`pickup_logistics.txt` — exactly how a pickup works from the store's perspective: a trained volunteer comes at a scheduled time, the store just sets items aside the night before, pickups take about 15 minutes, we accept most non-expired food items, cold chain is maintained.
+
+`objection_responses.txt` — natural, human-sounding responses to the most common things a grocery store manager might say to push back. Examples include: "we're too busy," "we already have a program," "call back next week," "talk to my district manager," "we throw everything out for liability reasons," "we don't have space to set things aside."
+
+---
+
+## Team roles
+
+Person 1 owns the Vapi integration — configuring the Vapi agent in the dashboard, setting up the webhook URL, and testing that calls actually trigger and connect to the backend.
+
+Person 2 owns the LangChain agent and RAG knowledge base — writing the documents in `rag/documents/`, building `langchain_agent.py` and `rag_retriever.py`, and making sure the agent reasons and retrieves correctly.
+
+Person 3 owns the frontend dashboard and database — the Next.js UI showing the call log and Ottawa map, the PostgreSQL schema, and making sure call outcomes get saved and displayed in real time.
+
+---
+
+## Coding conventions
+
+Always use async FastAPI route handlers (`async def`) since we will have I/O-bound operations like database queries and API calls. Use Pydantic models for request and response validation in FastAPI routes. SQLAlchemy sessions should be handled with dependency injection using FastAPI's `Depends` pattern. All new Python packages must be added with `uv add package-name` from inside the `backend/` directory, not with pip.
+
+On the frontend, use Tailwind utility classes for styling. All data fetching from the FastAPI backend should use the native `fetch` API or SWR for real-time updates. The backend runs on port 8000 and the frontend on port 3000. In development (outside Docker), the frontend fetches from `http://localhost:8000`. Inside Docker, services communicate by service name.
+
+For the live call log on the dashboard, poll the backend every 2-3 seconds using `setInterval` or SWR's `refreshInterval` option. This gives the appearance of real-time updates without the complexity of WebSockets.
+
+---
+
+## Demo script (for context on what we are building toward)
+
+The 3-minute hackathon demo works as follows. First, 30 seconds establishing the problem — a coordinator spends hours cold-calling stores every week and most calls go unanswered. Then, the main demo moment: trigger a call live on stage to a phone number (a teammate pretending to be a store manager). The voice agent calls, introduces itself, the "manager" pushes back with an objection like "we're pretty busy," the agent handles it naturally using information from the RAG knowledge base, and books a pickup. The judges watch the call log update in real time on the dashboard as this happens. Then a quick 20-second view of the neighbourhood prediction map showing Ottawa with a risk zone highlighted. Then a donor impact summary example. Then 30 seconds of vision — how many tonnes of food per year FoodFlow could redirect without adding a single extra volunteer.
+
+This demo context should inform every technical decision: the webhook must be fast, the agent must sound natural and handle objections, and the dashboard must update visibly in real time.
+
+# FoodFlow — Cursor Context for Person 3 (Frontend + Database)
+
+## My role on this project
+
+I am Person 3 on the FoodFlow hackathon team. My ownership is the Next.js frontend dashboard and the PostgreSQL database. I do not own the Vapi voice agent or the LangChain AI logic — those belong to my teammates. My job is to make sure call outcomes get saved to the database correctly, and that the dashboard displays everything clearly and in real time. The demo lives or dies on how good the frontend looks during the live call on stage, so visual quality matters a lot.
+
+---
+
+## What this project does (big picture)
+
+FoodFlow is an AI voice agent that automatically calls grocery store managers on behalf of a food bank (Food for the Capital, Ottawa) to arrange surplus food pickups. A coordinator presses a button on the dashboard, the voice agent makes the calls, handles the conversation intelligently, and logs the outcome. The dashboard is the control center — it shows which stores were called, what happened, and a map of Ottawa showing active partner stores and at-risk neighbourhoods.
+
+The hackathon is targeting the "Best AI for Community Impact" category. The demo is 3 minutes. Judges will literally be watching my dashboard on stage while a live phone call happens. This means the call log needs to update in real time, look clean, and tell the story immediately.
+
+---
+
+## My tech stack
+
+The frontend uses Next.js 16 with the App Router, Tailwind CSS v4, and TypeScript. It lives in the frontend/ folder. Run it locally with npm run dev from inside the frontend/ folder. It runs on port 3000.
+
+The backend (not my code, but I consume it) is FastAPI running on port 8000. I fetch data from it using the native fetch API or SWR. In development outside Docker the base URL is http://localhost:8000. Inside Docker services talk to each other by name, but I don't need to worry about that for local development.
+
+The database is PostgreSQL 15 managed with SQLAlchemy in the backend. I do not write raw SQL — the backend team handles all queries. My job related to the database is defining the schema (the Call model in backend/database.py) and making sure the right fields exist for the dashboard to display.
+
+Everything runs together via Docker Compose at the project root. To spin up just the database locally I run docker compose up db from the project root. I do not need Docker running to work on the frontend — I just need the backend running separately.
+
+---
+
+## The database schema I own
+
+The Call model in backend/database.py represents one outreach call the voice agent made. Here are all the fields and what they mean in plain English.
+
+id is a String primary key — always generate this as a UUID using str(uuid4()) when creating a new call record. Never use auto-increment integers here.
+
+store_name is a String like "Loblaws Merivale" or "No Frills Bank Street" — the human-readable name of the store that was called.
+
+phone_number is a String — the number that was dialed.
+
+called_at is a DateTime — the exact moment the call was triggered. Always store in UTC.
+
+answered is a Boolean — did a human actually pick up the phone, or did it go to voicemail?
+
+outcome is a String with four possible values: "agreed" (store wants to partner), "callback" (manager asked us to call back), "rejected" (store declined), "no_answer" (nobody picked up or went to voicemail).
+
+pickup_scheduled is a Boolean — true only if outcome is "agreed" and a specific pickup time was confirmed during the call.
+
+notes is a String — a short summary of anything interesting from the call transcript, like what objection the manager raised or what day they want pickups.
+
+---
+
+## The backend API endpoints I consume
+
+My teammate is building these FastAPI endpoints. I should fetch from them in the frontend. Until they are ready, I mock the data locally.
+
+GET /calls returns a JSON array of all call records, most recent first. Each object matches the Call schema above. I poll this every 2-3 seconds on the dashboard to simulate real-time updates — use SWR's refreshInterval option set to 2000.
+
+GET /calls/stats returns a summary object like { total: 24, agreed: 8, rejected: 5, callback: 6, no_answer: 5 } for the stat cards at the top of the dashboard.
+
+POST /calls/trigger accepts a JSON body with { store_name, phone_number } and triggers the voice agent to start a call. This is what the big "Start outreach" button on the dashboard calls.
+
+If an endpoint is not built yet I should mock the response locally and wire it up later. Never block frontend progress waiting for backend endpoints.
+
+---
+
+## The dashboard layout I am building
+
+The dashboard has four main sections arranged on a single page. Think of it as a mission control screen.
+
+The top section is a row of four stat cards showing: total calls made, stores agreed, calls in progress (if any), and food rescued this week (a calculated estimate). These use the /calls/stats endpoint.
+
+Below that on the left is the live call log — the most important element for the demo. This is a vertically scrolling list of call cards, most recent at the top, that updates every 2 seconds. Each card shows the store name, the outcome as a colour-coded badge (green for agreed, red for rejected, yellow for callback, gray for no answer), the time it was called, and the notes field if it has content. When a new card appears it should feel alive — a subtle fade-in animation is enough.
+
+On the right side is the Ottawa map built with Leaflet.js and react-leaflet. The map is centred on Ottawa (latitude 45.4215, longitude -75.6972) at zoom level 12. It shows two layers: grocery store markers (blue pins) and food bank locations (green pins). For the demo, hardcode 5-6 real Ottawa grocery store locations and 2-3 food bank locations. When a store in the call log has outcome "agreed" its pin on the map should turn green.
+
+Below the map is a simple "Start outreach" button that triggers POST /calls/trigger. During the demo this is the button the presenter clicks to kick off the live call on stage. Make it prominent — large, full width on mobile, clearly labelled.
+
+---
+
+## Ottawa locations to hardcode for the demo map
+
+These are real Ottawa locations to use as grocery store markers for the demo.
+
+Loblaws Merivale is at 1750 Merivale Rd (lat 45.3647, lng -75.7427).
+Loblaws St Laurent is at 1225 St Laurent Blvd (lat 45.4285, lng -75.6214).
+No Frills Carling is at 1309 Carling Ave (lat 45.3926, lng -75.7559).
+Metro Baseline is at 3600 Baseline Rd (lat 45.3497, lng -75.7620).
+Food Basics Cyrville is at 2225 Cyrville Rd (lat 45.4142, lng -75.5967).
+
+For food bank markers use these.
+Food for the Capital main location is at 1400 Clyde Ave (lat 45.3583, lng -75.7448).
+The Parkdale Food Centre is at 30 Rosemount Ave (lat 45.4033, lng -75.7283).
+
+---
+
+## Styling conventions
+
+Use Tailwind utility classes for everything — do not write custom CSS unless Tailwind cannot do it. The colour palette for outcome badges should be consistent everywhere: green-100 background with green-800 text for "agreed", red-100 with red-800 for "rejected", yellow-100 with yellow-800 for "callback", and gray-100 with gray-700 for "no_answer".
+
+For the overall dashboard feel, use a white or very light gray background (bg-gray-50), clean card containers with bg-white rounded-xl shadow-sm border border-gray-100, and consistent padding of p-4 or p-6. The goal is something that looks like a real SaaS product, not a hackathon project.
+
+---
+
+## Mocking data for development
+
+While the backend endpoints are being built, use this mock data shape locally so UI development is never blocked:
+
+const mockCalls = [
+  {
+    id: "1",
+    store_name: "Loblaws Merivale",
+    phone_number: "613-555-0101",
+    called_at: new Date().toISOString(),
+    answered: true,
+    outcome: "agreed",
+    pickup_scheduled: true,
+    notes: "Manager Sarah happy to help. Tuesdays 7am works."
+  },
+  {
+    id: "2",
+    store_name: "No Frills Carling",
+    phone_number: "613-555-0182",
+    called_at: new Date(Date.now() - 120000).toISOString(),
+    answered: true,
+    outcome: "callback",
+    pickup_scheduled: false,
+    notes: "Spoke to assistant manager. Call back Thursday."
+  },
+  {
+    id: "3",
+    store_name: "Metro Baseline",
+    phone_number: "613-555-0193",
+    called_at: new Date(Date.now() - 300000).toISOString(),
+    answered: false,
+    outcome: "no_answer",
+    pickup_scheduled: false,
+    notes: ""
+  }
+]
+
+---
+
+## npm packages I will need
+
+Run these from inside the frontend/ folder.
+
+For the map: npm install leaflet react-leaflet @types/leaflet
+For data fetching with auto-refresh: npm install swr
+
+Tailwind and TypeScript are already installed from create-next-app.
+
+---
+
+## Common mistakes to avoid
+
+Never hardcode localhost:8000 as a string — put it in a NEXT_PUBLIC_API_URL environment variable in a .env.local file inside the frontend/ folder so it can be changed without touching code.
+
+When using Leaflet with Next.js App Router, the map component must be dynamically imported with { ssr: false } because Leaflet requires the browser window object and will crash during server-side rendering. Always wrap the map in a dynamic import.
+
+When displaying timestamps from the database, always convert them to the user's local timezone using new Date(timestamp).toLocaleTimeString() — do not display raw UTC strings to users.
+
+The call log must show the most recent call at the top, so always sort the calls array by called_at descending before rendering.

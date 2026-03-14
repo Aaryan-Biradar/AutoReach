@@ -4,7 +4,7 @@ services:
   db:
     image: postgres:15
     environment:
-      POSTGRES_DB: foodflow
+      POSTGRES_DB: autoreach
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
     ports:

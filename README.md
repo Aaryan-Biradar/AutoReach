@@ -1,5 +1,41 @@
 # AutoReach
 
+## Project Structure
+
+```
+AutoReach/
+├── .env
+├── docker-compose.yml
+├── README.md
+├── backend/
+│   ├── main.py                  ← FastAPI entry point (Person 3)
+│   ├── database.py              ← SQLAlchemy models + session (Person 3)
+│   ├── routes/
+│   │   ├── dashboard.py         ← Frontend-facing API endpoints (Person 3)
+│   │   └── vapi_webhook.py      ← Receives Vapi call webhooks (Person 1)
+│   ├── services/
+│   │   ├── langchain_agent.py   ← LangChain reasoning logic (Person 2)
+│   │   └── rag_retriever.py     ← Vector search against pgvector (Person 2)
+│   └── rag/
+│       └── documents/
+│           ├── call_script.txt
+│           ├── foodbank_faq.txt
+│           ├── objection_responses.txt
+│           └── pickup_logistics.txt
+└── frontend/
+    └── app/
+        ├── page.tsx              ← Main dashboard page (Person 3)
+        ├── layout.tsx
+        ├── components/
+        │   ├── CallLog.tsx       ← Live call log with badges (Person 3)
+        │   ├── OttawaMap.tsx     ← Leaflet map of Ottawa (Person 3)
+        │   └── StatCards.tsx     ← Summary metric cards (Person 3)
+        └── lib/
+            └── api.ts            ← Central fetch functions (Person 3)
+```
+
+---
+
 ## Prerequisites
 
 Before you start, make sure you have the following installed on your machine.
