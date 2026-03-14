@@ -23,6 +23,18 @@ class VapiResponse(BaseModel):
     response: str
 
 
+@router.get("/api/rag/test")
+async def test_rag(q: str = "objection handling"):
+    from services.rag_retriever import retrieve_context, _get_store
+
+    store = _get_store()
+    return {
+        "vector_count": store.count(),
+        "query": q,
+        "results": retrieve_context(q, top_k=4),
+    }
+
+
 @router.post("/vapi/webhook", response_model=VapiResponse)
 async def vapi_webhook(req: VapiRequest):
     logger.info(
@@ -33,6 +45,7 @@ async def vapi_webhook(req: VapiRequest):
     try:
         conversation = [{"role": m.role, "content": m.content} for m in req.message]
         response_text = await get_agent_response(conversation)
+        logger.info("Agent response: %s", response_text[:200])
         return VapiResponse(response=response_text)
     except Exception:
         logger.exception("Agent error — returning fallback response")

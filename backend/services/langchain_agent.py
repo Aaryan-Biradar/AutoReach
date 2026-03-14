@@ -8,9 +8,8 @@ from services.rag_retriever import retrieve_context
 logger = logging.getLogger(__name__)
 
 ALEX_SYSTEM_PROMPT = """\
-You are Alex, an executive and outreach coordinator for Food for the Capital (FFTC), \
-a non-profit led by high school students in Ottawa. You are currently on a phone call \
-with a grocery store to ask permission to set up a food donation booth outside their store.
+You are Alex, an outreach coordinator for Food for the Capital (FFTC), \
+a non-profit in Ottawa. You are on a phone call with a grocery store.
 
 Your personality:
 - Friendly, driven, and highly respectful
@@ -18,17 +17,12 @@ Your personality:
 - Concise — managers are busy, keep responses short and natural
 - If interrupted, stop and listen
 
-Your goal on this call:
-1. Get past the gatekeeper to speak with the manager
-2. Pitch the booth event: 2 volunteers + 1 executive, table + donation boxes, outside the store, weekends 10am-2pm
-3. Secure verbal approval OR get an email to send an info package
-4. If declined, exit gracefully and leave the door open
+Use ONLY the knowledge base context provided in the prompt to answer questions \
+about FFTC, the booth event, logistics, stats, and objections. Do not make up \
+details that are not in the provided context.
 
-Key stats: Over 17,000 lbs of food and $17,000 raised for Ottawa food banks.
-
-Use the search_knowledge_base tool when you need specific details about FFTC, \
-objection responses, call scripts, or booth logistics. Respond with ONLY the next \
-thing you would say on the call — no stage directions, no labels, no quotation marks.\
+Respond with ONLY the next thing you would say on the call — no stage directions, \
+no labels, no quotation marks.\
 """
 
 
@@ -40,7 +34,9 @@ def search_knowledge_base(query: str):
     Args:
         query (str): The search query describing what information is needed.
     """
+    logger.info("RAG tool called with query: %s", query)
     results = retrieve_context(query, top_k=4)
+    logger.info("RAG returned %d chunks", len(results))
     return "\n\n".join(results)
 
 
@@ -55,8 +51,8 @@ AlexAgent = rt.agent_node(
 async def get_agent_response(conversation: list[dict]) -> str:
     """Take the full conversation history and return Alex's next reply.
 
-    Formats the Vapi conversation into a prompt, runs it through the
-    Railtracks agent (which may search RAG), and returns the text response.
+    Pre-fetches RAG context using the latest user message, injects it into
+    the prompt, then runs through the Railtracks agent.
     """
     lines = []
     for msg in conversation:
@@ -64,8 +60,19 @@ async def get_agent_response(conversation: list[dict]) -> str:
         lines.append(f"{speaker}: {msg['content']}")
     formatted = "\n".join(lines)
 
+    latest_user_msg = ""
+    for msg in reversed(conversation):
+        if msg["role"] == "user":
+            latest_user_msg = msg["content"]
+            break
+
+    logger.info("Pre-fetching RAG context for: %s", latest_user_msg[:100])
+    rag_chunks = retrieve_context(latest_user_msg, top_k=4)
+    rag_context = "\n\n".join(rag_chunks)
+
     prompt = (
-        f"Here is the conversation so far:\n\n{formatted}\n\n"
+        f"Relevant knowledge base context:\n{rag_context}\n\n"
+        f"Conversation so far:\n{formatted}\n\n"
         "Generate Alex's next response. Be concise and natural."
     )
 

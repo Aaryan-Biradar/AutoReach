@@ -1,32 +1,3 @@
-<<<<<<< Updated upstream
-Use calm, practical responses grounded in real outreach patterns from the FFTC store trackers.
-
-Common objection: "We're too busy."
-Suggested response: "I understand. We can keep this simple and send the details by email, then follow up closer to the event."
-
-Common objection: "Email me the information."
-Suggested response: "Absolutely. I can send a short summary and then check back after you've had time to review it."
-
-Common objection: "Call back later."
-Suggested response: "Of course. What day or time would be best for a quick follow-up?"
-
-Common objection: "We already support a food cupboard."
-Suggested response: "That's great to hear. We often work alongside local food banks, so if there is another opportunity or overflow need, we'd be happy to coordinate around that."
-
-Common objection: "It needs to stay local."
-Suggested response: "Understood. We can note that preference and coordinate with the local food bank that best serves your area."
-
-Common objection: "We're booked that weekend."
-Suggested response: "Thanks for letting me know. Would another event date or a future drive be easier to discuss?"
-
-Common objection: "I need approval from head office or another manager."
-Suggested response: "No problem. I can send a short summary by email so it is easier to review internally."
-
-Real outreach patterns from the trackers:
-- managers often ask for a reminder a few days before the event
-- managers sometimes want the same FFTC contact person to stay as the point of contact
-- some stores are interested but need time to confirm with a supervisor or food-bank partner
-=======
 FOOD FOR THE CAPITAL — OBJECTION HANDLING GUIDE
 
 Objection: "We don't have space inside the store."
@@ -52,4 +23,3 @@ Response: "Absolutely, I completely understand. What day and time works best for
 
 Objection: "I'm not the right person to talk to."
 Response: "No worries at all. Could you point me to the right person or let me know the best way to reach them? I'd really appreciate it."
->>>>>>> Stashed changes

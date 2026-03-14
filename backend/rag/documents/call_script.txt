@@ -1,32 +1,3 @@
-<<<<<<< Updated upstream
-Suggested FFTC outreach call structure:
-
-Opening:
-"Hi, this is [name] calling from Food for the Capital. We organize local food drives and community support events in Ottawa. Do you have a quick minute?"
-
-Core ask:
-"We're reaching out to see whether your store would be open to supporting a local food drive or donation effort for nearby food banks."
-
-If the manager is interested:
-"That's great, thank you. We can send a short summary by email and follow up closer to the event to confirm the details."
-
-If the manager wants written information:
-"Absolutely. I'll send over the information and then check back after you've had a chance to review it."
-
-If the manager wants a callback:
-"No problem at all. What day or time would work best for a quick follow-up?"
-
-If the manager says they already have a local partner:
-"That's great to hear. If there is ever another opportunity or an overflow need, we'd be glad to coordinate around that."
-
-Closing:
-"Thanks so much for your time today. We really appreciate your support for local food access in Ottawa."
-
-Tone guidance:
-- be brief and respectful
-- sound organized, not pushy
-- keep the next step simple: email, callback, reminder, or confirmation
-=======
 FOOD FOR THE CAPITAL — OUTREACH CALL SCRIPT
 
 === STAGE 1: GATEKEEPER ===
@@ -70,4 +41,3 @@ If NEEDS MORE INFO:
 
 If ASKED TO CALL BACK:
 "Absolutely, I completely understand. What day and time works best for me to call back?"
->>>>>>> Stashed changes

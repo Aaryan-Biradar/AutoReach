@@ -1,33 +1,3 @@
-<<<<<<< Updated upstream
-FFTC coordinates local food drives and pickup-style donation events with clear advance planning.
-
-From the event organization guide, lead organizers typically work on this timeline:
-- 8 weeks before: create the event folder, duplicate the volunteer registration form, and identify target stores
-- 6 weeks before: contact stores and divide outreach among team members
-- 4 weeks before: contact food banks, confirm the event date, and ask about boxes, posters, and donation pickup
-- 3 weeks before: recruit volunteers and organize them by location
-- 1 week before: confirm volunteer availability
-- 1 day before: send volunteer reminders
-
-Operational notes from the store trackers:
-- Some stores ask for an email summary before agreeing
-- Some stores prefer a reminder call a few days or one week before the event
-- Some stores are open only on weekends for event support
-- Some managers want the donation impact to remain local to a nearby food bank or neighbourhood
-
-Volunteer scheduling is typically organized by store location and by day. Past trackers show common event windows such as:
-- roughly 11:30 a.m. to 5:30 p.m.
-- roughly 11:45 a.m. to 5:45 p.m.
-- roughly 12:00 p.m. to 6:00 p.m.
-
-When discussing logistics on a call, it is safe to say:
-- FFTC plans events in advance
-- volunteers are organized by store and shift
-- the team can follow up by email if the manager prefers written information
-- reminder calls or emails closer to the event date are normal
-
-Do not promise exact pickup handling details unless the store has already confirmed them.
-=======
 FOOD FOR THE CAPITAL — BOOTH EVENT LOGISTICS
 
 What is a food donation booth event?
@@ -59,4 +29,3 @@ The booth operates entirely outside the store premises. FFTC volunteers and exec
 
 Post-event:
 After the event, FFTC delivers all collected food to our partner food banks. We can provide the store with a summary of the event's impact (pounds of food collected, monetary donations raised) for their records.
->>>>>>> Stashed changes
