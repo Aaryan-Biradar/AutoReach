@@ -1,7 +1,21 @@
-[PLACEHOLDER — Person 2 fills this in]
+Food for the Capital (FFTC) is a community food-drive and food-rescue organization focused on reducing food insecurity in Ottawa by organizing donation drives, coordinating volunteers, and supporting local food banks and cupboards.
 
-This file should contain factual information about Food for the Capital:
-- What the organization does and who they serve
-- How many families/people they help (pull real numbers from foodforthecapital.ca)
-- What kinds of food they accept
-- Their mission, values, and community impact
+Based on the FFTC results workbook, the organization reports:
+- 19,378.66 pounds of food collected overall
+- $20,087.16 in monetary donations overall
+- 1,763 volunteer hours overall
+
+The workbook separates results into Food for the Capital current events and earlier Kanata COVID Initiative events:
+- FFTC current events: 5,665.66 pounds of food, $12,087.16 raised, 1,013 volunteer hours
+- Previous KCI events: 13,713 pounds of food, $8,000 raised, 750 volunteer hours
+
+The organization has supported multiple community partners and food programs, including Barrhaven Food Cupboard, Kanata Food Cupboard, Ottawa Food Bank, FAMSAC Food Bank, Britannia Woods Food Pantry, Shepherds of Good Hope, and Stittsville Food Bank.
+
+FFTC has received recognition and awards for youth leadership and volunteer impact, including:
+- A #RisingYouth microgrant
+- Recognition from Kanata Food Cupboard
+- Recognition from Barrhaven Food Cupboard
+- RBC Spirit of the Capital Youth Awards
+- Ontario Medal for Young Volunteers
+
+When speaking with store managers, frame FFTC as an organized local volunteer initiative with a proven track record of collecting food, raising funds, and supporting Ottawa-area food banks.
