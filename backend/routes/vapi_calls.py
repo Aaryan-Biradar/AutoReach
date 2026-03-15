@@ -68,7 +68,7 @@ async def start_call(req: StartCallRequest | None = None):
                 "url": ngrok_url,
                 "model": "railtracks-alex",
             },
-            "server": {"url": ngrok_url},
+            "server": {"url": f"{ngrok_url}/vapi/webhook"},
             "serverMessages": [
                 "conversation-update",
                 "transcript",
@@ -128,7 +128,9 @@ async def stream_call(call_id: str):
                 msg_type = event.get("type", "")
                 if msg_type == "end-of-call-report":
                     break
-                if msg_type == "status-update" and event.get("status") in (
+                
+                status_val = event.get("status") or event.get("call", {}).get("status")
+                if msg_type == "status-update" and status_val in (
                     "ended", "completed", "failed", "canceled",
                 ):
                     break
