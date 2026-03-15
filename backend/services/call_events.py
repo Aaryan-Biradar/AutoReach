@@ -27,3 +27,14 @@ def push_event(call_id: str, event: dict) -> None:
 def remove_queue(call_id: str) -> None:
     """Clean up the queue when a call ends."""
     _queues.pop(call_id, None)
+
+
+def get_single_active_call_id() -> str | None:
+    """If exactly one call has a queue, return its id.
+
+    Used when Vapi omits 'call' from webhook payloads (e.g. some transcript
+    events); we push to the only active call so the frontend still gets events.
+    """
+    if len(_queues) != 1:
+        return None
+    return next(iter(_queues))
