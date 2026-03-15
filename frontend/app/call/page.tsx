@@ -297,7 +297,7 @@ export default function CallPage() {
               setPartial({ role, text });
             }
           } else if (msgType === "status-update") {
-            const vapiStatus = msg.status as string;
+            const vapiStatus = (msg.status || (msg.call && msg.call.status)) as string;
             if (vapiStatus === "in-progress") setStatus("in-progress");
             else if (vapiStatus === "ringing") setStatus("ringing");
             else if (vapiStatus === "queued") setStatus("queued");

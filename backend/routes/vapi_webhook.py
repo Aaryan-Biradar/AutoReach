@@ -3,8 +3,12 @@ import logging
 import time
 import uuid
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, BackgroundTasks
 from fastapi.responses import StreamingResponse
+
+import os
+from email_service import send_fftc_email
+from llm_service import generate_follow_up_email
 
 from services.langchain_agent import get_agent_response
 from services.call_events import push_event, get_single_active_call_id
@@ -12,6 +16,37 @@ from services.call_events import push_event, get_single_active_call_id
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+def process_call_email(message: dict):
+    # Try different locations for the transcript depending on Vapi event schema
+    transcript = message.get("transcript", "")
+    if not transcript:
+        artifact = message.get("artifact", {})
+        transcript = artifact.get("transcript", "")
+        if not transcript:
+            messages = artifact.get("messages", []) or message.get("messages", [])
+            if messages:
+                transcript = "\n".join(
+                    f"{m.get('role', 'unknown').capitalize()}: {m.get('message', m.get('content', ''))}"
+                    for m in messages if m.get('role') != 'system'
+                )
+                
+    if not transcript:
+        logger.warning("No transcript found to generate email.")
+        return
+        
+    logger.info("Generating follow-up email from transcript...")
+    try:
+        email_data = generate_follow_up_email(transcript)
+        subject = email_data.get("subject", "Automated Follow-up")
+        body = email_data.get("body", "Thank you for your time.")
+        
+        manager_email = os.environ.get("MANAGER_EMAIL", "sidharth.sajan25@gmail.com")
+        logger.info(f"Sending follow-up email to {manager_email}...")
+        send_fftc_email(manager_email, subject, body)
+    except Exception as e:
+        logger.error(f"Failed to process call email: {e}")
+
 
 
 # ---------------------------------------------------------------------------
@@ -135,7 +170,7 @@ def _normalize_transcript_message(message: dict) -> dict:
 
 
 @router.post("/vapi/webhook")
-async def vapi_webhook(request: Request):
+async def vapi_webhook(request: Request, background_tasks: BackgroundTasks):
     body = await request.json()
 
     message = body.get("message", body)
@@ -158,6 +193,9 @@ async def vapi_webhook(request: Request):
 
     if call_id and msg_type in ("transcript", "status-update", "end-of-call-report", "conversation-update"):
         push_event(call_id, message)
+
+    if msg_type == "end-of-call-report":
+        background_tasks.add_task(process_call_email, message)
 
     return {"ok": True}
 
