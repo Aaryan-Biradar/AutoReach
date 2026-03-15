@@ -150,10 +150,11 @@ async def chat_completions(request: Request):
 # ---------------------------------------------------------------------------
 
 def _normalize_transcript_message(message: dict) -> dict:
-    """Normalize Vapi transcript event so frontend always sees type/transcriptType.
+    """Normalize Vapi transcript event so frontend always sees type/transcriptType and transcript.
 
     Vapi may send type as "transcript[transcriptType=\"final\"]" instead of
-    type "transcript" + transcriptType "final". Copy to a new dict so we don't mutate the original.
+    type "transcript" + transcriptType "final". Transcript text may be in
+    "transcript", "content", or artifact.messages. We set a canonical "transcript" key.
     """
     msg_type = message.get("type", "")
     if not msg_type.startswith("transcript"):
@@ -166,6 +167,24 @@ def _normalize_transcript_message(message: dict) -> dict:
             out["transcriptType"] = "final"
         else:
             out["transcriptType"] = "partial"
+
+    # Ensure frontend always has a "transcript" string from whichever key Vapi used
+    if not (out.get("transcript") and str(out.get("transcript", "")).strip()):
+        text = out.get("content")
+        if text and isinstance(text, str):
+            out["transcript"] = text.strip()
+        else:
+            artifact = out.get("artifact") or {}
+            messages = artifact.get("messages") or []
+            if messages:
+                last = messages[-1] if isinstance(messages[-1], dict) else None
+                if last:
+                    text = last.get("message") or last.get("content") or ""
+                    if isinstance(text, str):
+                        out["transcript"] = text.strip()
+            if not out.get("transcript"):
+                out["transcript"] = ""
+
     return out
 
 
@@ -189,7 +208,11 @@ async def vapi_webhook(request: Request, background_tasks: BackgroundTasks):
     if not call_id and msg_type in ("transcript", "status-update", "end-of-call-report"):
         call_id = get_single_active_call_id()
 
-    logger.info("Vapi webhook — type=%s call=%s", msg_type, call_id)
+    if msg_type == "transcript":
+        has_text = bool(message.get("transcript") and str(message.get("transcript", "")).strip())
+        logger.info("Vapi webhook — type=transcript call=%s has_text=%s", call_id, has_text)
+    else:
+        logger.info("Vapi webhook — type=%s call=%s", msg_type, call_id)
 
     if call_id and msg_type in ("transcript", "status-update", "end-of-call-report", "conversation-update"):
         push_event(call_id, message)

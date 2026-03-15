@@ -3,6 +3,7 @@
 import { useRef, useEffect, useCallback, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import Transcriber from "../components/Transcriber";
 
 // ── Config ───────────────────────────────────────────────────────────────
 
@@ -178,67 +179,6 @@ function AIOrb({ active }: { active: boolean }) {
   );
 }
 
-// ── Transcript Panel ────────────────────────────────────────────────────
-
-function TranscriptPanel({
-  messages,
-  partial,
-}: {
-  messages: TranscriptMessage[];
-  partial: TranscriptMessage | null;
-}) {
-  const bottomRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, partial]);
-
-  const allMessages = partial ? [...messages, partial] : messages;
-  const hasPartial = partial !== null;
-
-  return (
-    <div className="w-full max-w-md bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-      <div className="px-5 py-3 border-b border-gray-100 flex items-center gap-2">
-        <span className="relative flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
-        </span>
-        <span className="text-sm font-semibold text-gray-700">Live Transcript</span>
-      </div>
-
-      <div className="overflow-y-auto max-h-80 px-5 py-4 space-y-4">
-        {allMessages.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-6">
-            Transcript will appear once the call connects...
-          </p>
-        ) : (
-          allMessages.map((msg, i) => {
-            const isAgent = msg.role === "assistant" || msg.role === "bot" || msg.role === "ai";
-            const isLast = i === allMessages.length - 1;
-            const isPartialMsg = isLast && hasPartial;
-            return (
-              <div key={i} className={isPartialMsg ? "opacity-60" : undefined}>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className={`text-xs font-semibold ${isAgent ? "text-purple-700" : "text-amber-600"}`}>
-                    {isAgent ? "Alex" : "Store Manager"}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-700 leading-relaxed">
-                  {msg.text}
-                  {isLast && (
-                    <span className="inline-block w-[2px] h-3.5 bg-purple-700 ml-0.5 align-middle animate-blink" />
-                  )}
-                </p>
-              </div>
-            );
-          })
-        )}
-        <div ref={bottomRef} />
-      </div>
-    </div>
-  );
-}
-
 // ── Status Badge ─────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: CallStatus }) {
@@ -303,7 +243,13 @@ export default function CallPage() {
           if (msgType === "transcript" || (typeof msgType === "string" && msgType.startsWith("transcript"))) {
             const inner = msg.message ?? msg;
             const role = (msg.role ?? inner.role ?? "user") as string;
-            const rawTranscript = msg.transcript ?? inner.transcript ?? "";
+            let rawTranscript: unknown =
+              msg.transcript ?? inner.transcript ?? msg.content ?? inner.content;
+            if ((rawTranscript === undefined || rawTranscript === null || rawTranscript === "") && msg.artifact?.messages?.length) {
+              const messages = msg.artifact.messages as Array<{ message?: string; content?: string }>;
+              const last = messages[messages.length - 1];
+              rawTranscript = last?.message ?? last?.content ?? "";
+            }
             const text = typeof rawTranscript === "string" ? rawTranscript.trim() : "";
             const transcriptType = (msg.transcriptType ?? inner.transcriptType ?? "partial") as string;
 
@@ -426,7 +372,12 @@ export default function CallPage() {
             </span>
           )}
         </div>
-        <TranscriptPanel messages={messages} partial={partial} />
+        <Transcriber
+          conversation={[
+            ...messages.map((m) => ({ role: m.role, text: m.text, isFinal: true })),
+            ...(partial ? [{ role: partial.role, text: partial.text, isFinal: false }] : []),
+          ]}
+        />
       </div>
 
       <div className="flex flex-col items-center gap-2">
