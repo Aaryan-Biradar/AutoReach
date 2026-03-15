@@ -5,6 +5,8 @@ import type { StoreRecord } from "../dashboard-types";
 
 const OTTAWA_CENTER: [number, number] = [-75.6972, 45.4215];
 const SOURCE_ID = "ottawa-grocery-stores";
+const TERRAIN_SOURCE_ID = "ottawa-terrain-dem";
+const BUILDINGS_LAYER_ID = "ottawa-3d-buildings";
 const POINTS_LAYER_ID = "ottawa-grocery-points";
 const SELECTED_LAYER_ID = "ottawa-grocery-selected";
 const LABELS_LAYER_ID = "ottawa-grocery-labels";
@@ -42,11 +44,27 @@ function buildPopupContent(store: StoreRecord) {
   address.className = "text-xs text-[#5d534b]";
   address.textContent = store.address || "Ottawa, Ontario";
 
+  const integration = document.createElement("p");
+  integration.className = "text-xs text-[#5d534b]";
+  integration.textContent =
+    store.integrationMode === "backend-target"
+      ? "Backend integration target"
+      : "Frontend sample store";
+
+  const phoneNumber = document.createElement("p");
+  phoneNumber.className = "text-xs text-[#5d534b]";
+  phoneNumber.textContent = `Phone: ${store.phoneNumber}`;
+
   const lastCalled = document.createElement("p");
   lastCalled.className = "text-xs text-[#5d534b]";
   lastCalled.textContent = `Last called: ${store.lastCalledLabel}`;
 
-  root.append(title, address, lastCalled);
+  if (store.phoneNumber) {
+    root.append(title, address, integration, phoneNumber, lastCalled);
+    return root;
+  }
+
+  root.append(title, address, integration, lastCalled);
   return root;
 }
 
@@ -99,6 +117,9 @@ export function OttawaGroceryMap({
   error,
   isFullscreen = false,
 }: OttawaGroceryMapProps) {
+  const initialZoom = isFullscreen ? 14.7 : 13.8;
+  const defaultPitch = isFullscreen ? 62 : 56;
+  const defaultBearing = isFullscreen ? -20 : -16;
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<import("mapbox-gl").Map | null>(null);
   const popupRef = useRef<import("mapbox-gl").Popup | null>(null);
@@ -164,8 +185,12 @@ export function OttawaGroceryMap({
         container: containerRef.current,
         style: "mapbox://styles/mapbox/light-v11",
         center: OTTAWA_CENTER,
-        zoom: isFullscreen ? 11.8 : 11,
+        zoom: initialZoom,
+        pitch: defaultPitch,
+        bearing: defaultBearing,
         minZoom: 9.4,
+        maxPitch: 75,
+        antialias: true,
       });
 
       mapRef.current = map;
@@ -177,7 +202,7 @@ export function OttawaGroceryMap({
 
       map.addControl(
         new mapboxgl.NavigationControl({
-          showCompass: false,
+          showCompass: true,
           visualizePitch: false,
         }),
         "top-right",
@@ -187,6 +212,60 @@ export function OttawaGroceryMap({
         if (isDisposed) {
           return;
         }
+
+        map.addSource(TERRAIN_SOURCE_ID, {
+          type: "raster-dem",
+          url: "mapbox://mapbox.mapbox-terrain-dem-v1",
+          tileSize: 512,
+          maxzoom: 14,
+        });
+
+        map.setTerrain({
+          source: TERRAIN_SOURCE_ID,
+          exaggeration: 1.2,
+        });
+
+        const labelLayerId = map
+          .getStyle()
+          .layers?.find(
+            (layer) =>
+              layer.type === "symbol" &&
+              typeof layer.layout?.["text-field"] !== "undefined",
+          )?.id;
+
+        map.addLayer(
+          {
+            id: BUILDINGS_LAYER_ID,
+            source: "composite",
+            "source-layer": "building",
+            filter: ["==", ["get", "extrude"], "true"],
+            type: "fill-extrusion",
+            minzoom: 14,
+            paint: {
+              "fill-extrusion-color": "#d8cfc1",
+              "fill-extrusion-height": [
+                "interpolate",
+                ["linear"],
+                ["zoom"],
+                14,
+                0,
+                14.6,
+                ["get", "height"],
+              ],
+              "fill-extrusion-base": [
+                "interpolate",
+                ["linear"],
+                ["zoom"],
+                14,
+                0,
+                14.6,
+                ["get", "min_height"],
+              ],
+              "fill-extrusion-opacity": 0.42,
+            },
+          },
+          labelLayerId,
+        );
 
         map.addSource(SOURCE_ID, {
           type: "geojson",
@@ -229,6 +308,8 @@ export function OttawaGroceryMap({
             "text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
             "text-offset": [1.2, 0],
             "text-anchor": "left",
+            "text-pitch-alignment": "viewport",
+            "text-rotation-alignment": "viewport",
             "text-allow-overlap": true,
             "text-ignore-placement": true,
           },
@@ -261,10 +342,6 @@ export function OttawaGroceryMap({
         });
 
         map.on("click", (event) => {
-          if (!onBackgroundClick) {
-            return;
-          }
-
           const features = map.queryRenderedFeatures(event.point, {
             layers: [POINTS_LAYER_ID, LABELS_LAYER_ID],
           });
@@ -285,7 +362,7 @@ export function OttawaGroceryMap({
       mapRef.current?.remove();
       mapRef.current = null;
     };
-  }, [accessToken, isFullscreen, onBackgroundClick]);
+  }, [accessToken, defaultBearing, defaultPitch, initialZoom, isFullscreen]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -306,11 +383,13 @@ export function OttawaGroceryMap({
 
     map.flyTo({
       center: [selectedStore.longitude, selectedStore.latitude],
-      zoom: isFullscreen ? 13.2 : 12.4,
+      zoom: isFullscreen ? 15.2 : 14.6,
+      pitch: defaultPitch + 8,
+      bearing: defaultBearing,
       essential: true,
       duration: 900,
     });
-  }, [isFullscreen, selectedStoreId, stores]);
+  }, [defaultBearing, defaultPitch, isFullscreen, selectedStoreId, stores]);
 
   if (!accessToken) {
     return (
@@ -319,7 +398,7 @@ export function OttawaGroceryMap({
       >
         <div className="max-w-lg">
           <p className="text-lg font-semibold text-[color:var(--foreground)]">
-            Add your Mapbox token to load Ottawa grocery stores
+            Add Your Mapbox Token To Load Ottawa Grocery Stores
           </p>
           <p className="mt-3 text-sm leading-6 text-[color:var(--muted-strong)]">
             Set <code>NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN</code> in
