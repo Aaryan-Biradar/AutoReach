@@ -318,26 +318,26 @@ const tabs: {
 }[] = [
   {
     id: "logs",
-    label: "Call history",
-    emptyTitle: "No call history yet",
+    label: "Call History",
+    emptyTitle: "No Call History Yet",
     emptyBody: "Store-specific call history will appear here after the backend is connected.",
   },
   {
     id: "transcripts",
     label: "Transcripts",
-    emptyTitle: "No transcripts yet",
+    emptyTitle: "No Transcripts Yet",
     emptyBody: "Transcript records will appear here once completed calls are available.",
   },
   {
     id: "planned",
-    label: "Planned calls",
-    emptyTitle: "No planned calls yet",
+    label: "Planned Calls",
+    emptyTitle: "No Planned Calls Yet",
     emptyBody: "Scheduled outreach will appear here when planning data is connected.",
   },
   {
     id: "missed",
-    label: "Missed calls",
-    emptyTitle: "No missed calls yet",
+    label: "Missed Calls",
+    emptyTitle: "No Missed Calls Yet",
     emptyBody: "Missed-call follow-up items will appear here after live data is available.",
   },
 ];
@@ -373,14 +373,17 @@ export default function Home() {
     .sort((left, right) => left.daysAgo - right.daysAgo);
   const historyWindowStartDays = historyOffsetDays;
   const historyWindowEndDays = historyOffsetDays + lookbackDays;
-  const visibleRecentCallRecords = allMockCallRecords
+  const historyWindowCallRecords = allMockCallRecords
     .filter(
       (record) =>
         record.daysAgo >= historyWindowStartDays &&
         record.daysAgo <= historyWindowEndDays,
-    )
-    .slice(0, 24);
+    );
+  const visibleRecentCallRecords = historyWindowCallRecords.slice(0, 24);
   const answeredCallRecords = allMockCallRecords.filter(
+    (record) => record.durationSeconds > 0,
+  );
+  const historyWindowAnsweredCallRecords = historyWindowCallRecords.filter(
     (record) => record.durationSeconds > 0,
   );
   const totalMissedCalls = allMockCallRecords.filter(
@@ -388,6 +391,10 @@ export default function Home() {
   ).length;
   const totalCallsMade = allMockCallRecords.length;
   const answeredCalls = answeredCallRecords.length;
+  const missedCallPercentageLabel =
+    totalCallsMade > 0
+      ? `${Math.round((totalMissedCalls / totalCallsMade) * 100)}%`
+      : "0%";
   const averageCallTimeLabel =
     answeredCallRecords.length > 0
       ? formatDuration(
@@ -402,11 +409,31 @@ export default function Home() {
   const plannedFollowUpsCount =
     stores.reduce((total, store) => total + store.pendingCallsCount, 0) +
     Object.keys(queuedCalls).length;
+  const callsMadeInHistoryWindow = historyWindowCallRecords.length;
   const storesInHistoryWindow = new Set(
-    visibleRecentCallRecords.map((record) => record.storeId),
+    historyWindowCallRecords.map((record) => record.storeId),
   ).size;
-  const missedCallsInHistoryWindow = visibleRecentCallRecords.filter(
+  const missedCallsInHistoryWindow = historyWindowCallRecords.filter(
     (record) => record.outcome === "Missed",
+  ).length;
+  const answeredCallsInHistoryWindow = historyWindowAnsweredCallRecords.length;
+  const averageCallTimeInHistoryWindowLabel =
+    historyWindowAnsweredCallRecords.length > 0
+      ? formatDuration(
+          Math.round(
+            historyWindowAnsweredCallRecords.reduce(
+              (total, record) => total + record.durationSeconds,
+              0,
+            ) / historyWindowAnsweredCallRecords.length,
+          ),
+        )
+      : "0m 00s";
+  const missedCallPercentageInHistoryWindowLabel =
+    callsMadeInHistoryWindow > 0
+      ? `${Math.round((missedCallsInHistoryWindow / callsMadeInHistoryWindow) * 100)}%`
+      : "0%";
+  const plannedFollowUpsInHistoryWindowCount = historyWindowCallRecords.filter(
+    (record) => record.outcome === "Callback requested",
   ).length;
   const displayedStores = filteredStores.slice(0, 14);
   const selectedStore =
@@ -422,11 +449,11 @@ export default function Home() {
     (selectedStore?.pendingCallsCount ?? 0) + (queuedCallLabel ? 1 : 0);
   const activePanelTitle =
     activeTab === "planned" && queuedCallLabel
-      ? "1 planned call queued"
+      ? "1 Planned Call Queued"
       : activeTab === "planned" && (selectedStore?.pendingCallsCount ?? 0) > 0
-        ? `${selectedStore?.pendingCallsCount ?? 0} planned calls`
+        ? `${selectedStore?.pendingCallsCount ?? 0} Planned Calls`
         : activeTab === "missed" && (selectedStore?.missedCalls ?? 0) > 0
-          ? `${selectedStore?.missedCalls ?? 0} missed calls`
+          ? `${selectedStore?.missedCalls ?? 0} Missed Calls`
       : activeTabMeta.emptyTitle;
   const activePanelBody =
     activeTab === "planned" && queuedCallLabel
@@ -668,7 +695,7 @@ export default function Home() {
             <div className="rounded-[30px] border border-[color:var(--border)] bg-[color:var(--surface)] p-5 shadow-[0_24px_80px_-46px_rgba(20,20,20,0.16)] backdrop-blur sm:p-6">
               <div className="max-w-xs">
                 <h2 className="text-xl font-semibold text-[color:var(--foreground)]">
-                  Store Controls and Visual Map
+                  Store Search
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-[color:var(--muted-strong)]">
                   Search Ottawa grocery stores, review recent call history, and jump into the visual map from one place.
@@ -694,11 +721,11 @@ export default function Home() {
                     <div className="flex items-center justify-between gap-3 px-1 pb-2">
                       <p className="text-sm text-[color:var(--muted-strong)]">
                         {!MAPBOX_ACCESS_TOKEN
-                          ? "Mapbox token needed"
+                          ? "Mapbox Token Needed"
                           : isStoresLoading
                             ? "Loading Ottawa grocery stores..."
                             : storesError
-                              ? "Map data unavailable"
+                              ? "Map Data Unavailable"
                               : normalizedQuery
                                 ? `${filteredStores.length} matching stores`
                                 : `${stores.length} Ottawa grocery stores`}
@@ -727,7 +754,7 @@ export default function Home() {
                               </span>
                               {store.integrationMode === "backend-target" ? (
                                 <span className="mt-1 inline-flex rounded-full border border-[color:var(--border-strong)] bg-[#fff3df] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--foreground)]">
-                                  Backend target
+                                  Backend Target
                                 </span>
                               ) : null}
                             <span className="mt-1 block truncate text-xs text-[color:var(--muted-strong)]">
@@ -776,10 +803,10 @@ export default function Home() {
                     className="w-full rounded-[24px] border border-[color:var(--border)] bg-[color:var(--surface-strong)] px-4 py-4 text-left transition hover:border-[color:var(--border-strong)] hover:bg-[#fff3df] disabled:cursor-not-allowed disabled:border-[color:var(--border)] disabled:bg-[color:var(--surface-soft)] disabled:opacity-70"
                   >
                     <span className="block text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
-                      Priority follow-up
+                      Priority Follow-Up
                     </span>
                     <span className="mt-2 block text-lg font-semibold text-[color:var(--foreground)]">
-                      Queue follow-up calls
+                      Queue Follow-Up Calls
                     </span>
                     <span className="mt-2 block text-sm leading-6 text-[color:var(--muted-strong)]">
                       {unqueuedRedStores.length > 0
@@ -796,10 +823,10 @@ export default function Home() {
                     className="w-full rounded-[24px] border border-[color:var(--border)] bg-[color:var(--surface-strong)] px-4 py-4 text-left transition hover:border-[color:var(--border-strong)] hover:bg-[#fff3df]"
                   >
                     <span className="block text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
-                      All stores
+                      All Stores
                     </span>
                     <span className="mt-2 block text-lg font-semibold text-[color:var(--foreground)]">
-                      Recent call history
+                      Recent Call History
                     </span>
                     <span className="mt-2 block text-sm leading-6 text-[color:var(--muted-strong)]">
                       Open the full recent-history view and use the sliders to move further back in time.
@@ -815,7 +842,7 @@ export default function Home() {
             <div className="flex h-full min-h-0 flex-col">
               <div className="max-w-2xl">
                 <h2 className="text-2xl font-semibold text-[color:var(--foreground)] sm:text-[2rem]">
-                  Visual map
+                  Visual Map
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-[color:var(--muted-strong)]">
                   Click the map to expand it. It shows Ottawa grocery stores from Mapbox Search. Click a store marker to open its metrics and last-call status.
@@ -844,7 +871,7 @@ export default function Home() {
             <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
               <div className="min-w-0 sm:flex-1">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
-                  Store details
+                  Store Details
                 </p>
                 <h2 className="mt-2 break-words text-2xl font-semibold text-[color:var(--foreground)] sm:text-3xl">
                   {selectedStore ? selectedStore.name : "Selected store"}
@@ -855,7 +882,7 @@ export default function Home() {
                 onClick={() => setIsStoreWorkspaceOpen(false)}
                 className="shrink-0 self-start rounded-full border border-[color:var(--border)] bg-[color:var(--surface-soft)] px-4 py-2 text-sm font-medium text-[color:var(--foreground)] transition hover:border-[color:var(--border-strong)] hover:bg-[#fff3df]"
               >
-                Close workspace
+                Close Workspace
               </button>
             </div>
 
@@ -894,7 +921,7 @@ export default function Home() {
               <div className="grid content-start gap-4 xl:self-start">
                 <div className="rounded-[26px] border border-[color:var(--border)] bg-[color:var(--surface-soft)] p-5">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
-                    Location on map
+                    Location On Map
                   </p>
                   <p className="mt-3 text-sm leading-6 text-[color:var(--muted-strong)]">
                     {selectedStore?.address ?? "Not available yet"}
@@ -902,7 +929,7 @@ export default function Home() {
                   {selectedStorePhoneNumber ? (
                     <div className="mt-4 rounded-[20px] border border-[color:var(--border)] bg-[color:var(--surface-strong)] px-4 py-3">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
-                        Phone number
+                        Phone Number
                       </p>
                       <p className="mt-2 text-sm text-[color:var(--muted-strong)]">
                         {selectedStorePhoneNumber}
@@ -911,7 +938,7 @@ export default function Home() {
                   ) : null}
                   <div className="mt-4 rounded-[20px] border border-[color:var(--border)] bg-[color:var(--surface-strong)] px-4 py-3">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
-                      Last called
+                      Last Called
                     </p>
                     <p className="mt-2 text-sm text-[color:var(--muted-strong)]">
                       {selectedStore?.lastCalledLabel ?? "Not available yet"}
@@ -921,7 +948,7 @@ export default function Home() {
                     <>
                       <div className="mt-4 rounded-[20px] border border-[color:var(--border)] bg-[color:var(--surface-strong)] px-4 py-3">
                         <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
-                          Integration status
+                          Integration Status
                         </p>
                         <p className="mt-2 text-sm text-[color:var(--muted-strong)]">
                           Connected as the dedicated backend integration target.
@@ -932,7 +959,7 @@ export default function Home() {
                         onClick={() => setIsMapOpen(true)}
                         className="mt-4 rounded-full border border-[color:var(--border-strong)] bg-[color:var(--accent)] px-4 py-2 text-sm font-medium text-[color:var(--foreground)] transition hover:bg-[color:var(--accent-strong)]"
                       >
-                        Open map view
+                        Open Map View
                       </button>
                     </>
                   ) : null}
@@ -941,7 +968,7 @@ export default function Home() {
                 <div className="grid gap-4">
                   <div className="rounded-[26px] border border-[color:var(--border)] bg-[color:var(--surface-soft)] p-5">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
-                      Missed calls
+                      Missed Calls
                     </p>
                     <p className="mt-3 text-3xl font-semibold text-[color:var(--foreground)]">
                       {selectedStore?.missedCalls ?? 0}
@@ -954,7 +981,7 @@ export default function Home() {
 
                 <div className="rounded-[26px] border border-[color:var(--border)] bg-[color:var(--surface-soft)] p-5">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
-                    Pending calls
+                    Pending Calls
                   </p>
                   <p className="mt-3 text-3xl font-semibold text-[color:var(--foreground)]">
                     {pendingCallsTotal}
@@ -964,12 +991,12 @@ export default function Home() {
                     onClick={queueCallForSelectedStore}
                     className="mt-4 rounded-full border border-[color:var(--border-strong)] bg-[color:var(--accent)] px-4 py-2 text-sm font-medium text-[color:var(--foreground)] transition hover:bg-[color:var(--accent-strong)]"
                   >
-                    Queue a call
+                    Queue A Call
                   </button>
                   <div className="mt-4 grid gap-3">
                     <div className="rounded-[20px] border border-[color:var(--border)] bg-[color:var(--surface-strong)] px-4 py-3">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
-                        Next pending call
+                        Next Pending Call
                       </p>
                       <p className="mt-2 text-sm text-[color:var(--muted-strong)]">
                         {queuedCallLabel ?? selectedStore?.nextPendingCallLabel ?? "Not scheduled"}
@@ -977,7 +1004,7 @@ export default function Home() {
                     </div>
                     <div className="rounded-[20px] border border-[color:var(--border)] bg-[color:var(--surface-strong)] px-4 py-3">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
-                        Pending call window
+                        Pending Call Window
                       </p>
                       <p className="mt-2 text-sm text-[color:var(--muted-strong)]">
                         {queuedCallLabel
@@ -999,10 +1026,10 @@ export default function Home() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
-                  Ottawa grocery map
+                  Ottawa Grocery Map
                 </p>
                 <h2 className="mt-2 text-2xl font-semibold text-[color:var(--foreground)] sm:text-3xl">
-                  Full-screen store map
+                  Full-Screen Store Map
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-[color:var(--muted-strong)]">
                   Click any grocery-store marker to open that store&apos;s details, call history, transcripts, and queue controls.
@@ -1013,7 +1040,7 @@ export default function Home() {
                 onClick={() => setIsMapOpen(false)}
                 className="rounded-full border border-[color:var(--border)] bg-[color:var(--surface-soft)] px-4 py-2 text-sm font-medium text-[color:var(--foreground)] transition hover:border-[color:var(--border-strong)] hover:bg-[#fff3df]"
               >
-                Close map
+                Close Map
               </button>
             </div>
 
@@ -1037,31 +1064,28 @@ export default function Home() {
       {isHistoryOpen ? (
         <div className="fixed inset-0 z-30 flex bg-[rgba(24,21,18,0.58)] p-4 sm:p-6">
           <div className="flex h-full w-full flex-col rounded-[32px] border border-[color:var(--border)] bg-[color:var(--surface-strong)] p-5 shadow-[0_40px_100px_-40px_rgba(0,0,0,0.28)] sm:p-6">
-            <div className="flex items-start justify-between gap-4">
-              <div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="space-y-2">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
-                  All stores
+                  All Stores
                 </p>
-                <h2 className="mt-2 text-2xl font-semibold text-[color:var(--foreground)] sm:text-3xl">
-                  Recent call history
+                <h2 className="text-2xl font-semibold text-[color:var(--foreground)] sm:text-3xl">
+                  Recent Call History
                 </h2>
-                <p className="mt-2 text-sm leading-6 text-[color:var(--muted-strong)]">
-                  Frontend sample calls across all stores. Transcript contents still stay empty for now.
-                </p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsHistoryOpen(false)}
                 className="rounded-full border border-[color:var(--border)] bg-[color:var(--surface-soft)] px-4 py-2 text-sm font-medium text-[color:var(--foreground)] transition hover:border-[color:var(--border-strong)] hover:bg-[#fff3df]"
               >
-                Close history
+                Close History
               </button>
             </div>
 
-            <div className="mt-5 grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+            <div className="mt-4 grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
               <div className="rounded-[26px] border border-[color:var(--border)] bg-[color:var(--surface-soft)] p-5">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
-                  Look-back window
+                  Look-Back Window
                 </p>
                 <p className="mt-2 text-2xl font-semibold text-[color:var(--foreground)]">
                   {lookbackDays} days
@@ -1075,14 +1099,11 @@ export default function Home() {
                   onChange={(event) => setLookbackDays(Number(event.target.value))}
                   className="mt-4 w-full accent-[color:var(--accent)]"
                 />
-                <p className="mt-3 text-sm leading-6 text-[color:var(--muted-strong)]">
-                  Slide to widen or narrow the recent-history window.
-                </p>
               </div>
 
               <div className="rounded-[26px] border border-[color:var(--border)] bg-[color:var(--surface-soft)] p-5">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
-                  Timeline offset
+                  Timeline Offset
                 </p>
                 <p className="mt-2 text-2xl font-semibold text-[color:var(--foreground)]">
                   {historyOffsetDays} days back
@@ -1098,47 +1119,35 @@ export default function Home() {
                   }
                   className="mt-4 w-full accent-[color:var(--accent)]"
                 />
-                <p className="mt-3 text-sm leading-6 text-[color:var(--muted-strong)]">
-                  Slide further back in time to inspect older call windows.
-                </p>
               </div>
             </div>
 
-            <div className="mt-5 grid min-h-0 flex-1 gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
+            <div className="mt-4 grid min-h-0 flex-1 gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
               <div className="grid content-start gap-4">
                 <div className="rounded-[26px] border border-[color:var(--border)] bg-[color:var(--surface-soft)] p-5">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
-                    Calls in range
+                    Calls In Range
                   </p>
                   <p className="mt-3 text-3xl font-semibold text-[color:var(--foreground)]">
-                    {visibleRecentCallRecords.length}
-                  </p>
-                  <p className="mt-3 text-sm leading-6 text-[color:var(--muted-strong)]">
-                    Calls shown for the current slider window.
+                    {callsMadeInHistoryWindow}
                   </p>
                 </div>
 
                 <div className="rounded-[26px] border border-[color:var(--border)] bg-[color:var(--surface-soft)] p-5">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
-                    Stores in range
+                    Stores In Range
                   </p>
                   <p className="mt-3 text-3xl font-semibold text-[color:var(--foreground)]">
                     {storesInHistoryWindow}
                   </p>
-                  <p className="mt-3 text-sm leading-6 text-[color:var(--muted-strong)]">
-                    Unique stores represented in this time window.
-                  </p>
                 </div>
 
                 <div className="rounded-[26px] border border-[color:var(--border)] bg-[color:var(--surface-soft)] p-5">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
-                    Missed in range
+                    Missed In Range
                   </p>
                   <p className="mt-3 text-3xl font-semibold text-[color:var(--foreground)]">
                     {missedCallsInHistoryWindow}
-                  </p>
-                  <p className="mt-3 text-sm leading-6 text-[color:var(--muted-strong)]">
-                    Calls that were not answered in this view.
                   </p>
                 </div>
               </div>
@@ -1147,14 +1156,14 @@ export default function Home() {
                 <div className="flex items-center justify-between gap-4 border-b border-[color:var(--border)] pb-3">
                   <div>
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
-                      Recent calls
+                      Recent Calls
                     </p>
                     <p className="mt-1 text-sm text-[color:var(--muted-strong)]">
                       Showing the latest calls inside the selected window.
                     </p>
                   </div>
                   <div className="rounded-full border border-[color:var(--border)] bg-[color:var(--surface-strong)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
-                    0 transcripts
+                    0 Transcripts
                   </div>
                 </div>
 
@@ -1179,7 +1188,7 @@ export default function Home() {
                               {record.outcome}
                             </span>
                             <span className="rounded-full border border-[color:var(--border)] bg-[color:var(--surface-soft)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--muted)]">
-                              Transcript empty
+                              Transcript Empty
                             </span>
                           </div>
                         </div>
@@ -1187,7 +1196,7 @@ export default function Home() {
                         <div className="mt-4 grid gap-3 sm:grid-cols-3">
                           <div className="rounded-[18px] border border-[color:var(--border)] bg-[color:var(--surface-soft)] px-3 py-3">
                             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[color:var(--muted)]">
-                              Call time
+                              Call Time
                             </p>
                             <p className="mt-2 text-sm text-[color:var(--muted-strong)]">
                               {record.occurredAtLabel}
@@ -1195,7 +1204,7 @@ export default function Home() {
                           </div>
                           <div className="rounded-[18px] border border-[color:var(--border)] bg-[color:var(--surface-soft)] px-3 py-3">
                             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[color:var(--muted)]">
-                              Relative age
+                              Relative Age
                             </p>
                             <p className="mt-2 text-sm text-[color:var(--muted-strong)]">
                               {record.relativeAgeLabel}
@@ -1216,7 +1225,7 @@ export default function Home() {
                     <div className="flex h-full min-h-[220px] items-center justify-center rounded-[22px] border border-dashed border-[color:var(--border)] bg-[color:var(--surface-strong)] px-6 text-center">
                       <div className="max-w-lg">
                         <p className="text-lg font-semibold text-[color:var(--foreground)]">
-                          No calls in this time window
+                          No Calls In This Time Window
                         </p>
                         <p className="mt-3 text-sm leading-7 text-[color:var(--muted-strong)]">
                           Try widening the look-back window or reducing the timeline offset to reveal more sample calls.
@@ -1233,141 +1242,194 @@ export default function Home() {
 
       {isStatsOpen ? (
         <div className="fixed inset-0 z-30 flex bg-[rgba(24,21,18,0.58)] p-4 sm:p-6">
-          <div className="flex h-full w-full flex-col rounded-[32px] border border-[color:var(--border)] bg-[color:var(--surface-strong)] p-5 shadow-[0_40px_100px_-40px_rgba(0,0,0,0.28)] sm:p-6">
-            <div className="flex items-start justify-between gap-4">
+          <div className="flex h-full w-full flex-col overflow-y-auto rounded-[32px] border border-[color:var(--border)] bg-[color:var(--surface-strong)] p-4 shadow-[0_40px_100px_-40px_rgba(0,0,0,0.28)] sm:p-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
-                  Dashboard stats
+                  Dashboard Stats
                 </p>
                 <h2 className="mt-2 text-2xl font-semibold text-[color:var(--foreground)] sm:text-3xl">
-                  Outreach statistics
+                  Outreach Statistics
                 </h2>
-                <p className="mt-2 text-sm leading-6 text-[color:var(--muted-strong)]">
-                  Frontend sample totals based on the current mock call activity across Ottawa stores.
-                </p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsStatsOpen(false)}
                 className="rounded-full border border-[color:var(--border)] bg-[color:var(--surface-soft)] px-4 py-2 text-sm font-medium text-[color:var(--foreground)] transition hover:border-[color:var(--border-strong)] hover:bg-[#fff3df]"
               >
-                Close stats
+                Close Stats
               </button>
             </div>
 
-            <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              <div className="rounded-[26px] border border-[color:var(--border)] bg-[color:var(--surface-soft)] p-5">
+            <div className="mt-4 rounded-[28px] border border-[color:var(--border)] bg-[color:var(--surface-soft)] p-4">
+              <div className="border-b border-[color:var(--border)] pb-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
-                  Calls made
+                  All Time
                 </p>
-                <p className="mt-3 text-3xl font-semibold text-[color:var(--foreground)]">
-                  {totalCallsMade}
-                </p>
-                <p className="mt-3 text-sm leading-6 text-[color:var(--muted-strong)]">
-                  Total completed and attempted calls across the dashboard.
-                </p>
+                <h3 className="mt-2 text-xl font-semibold text-[color:var(--foreground)]">
+                  Overall Stats
+                </h3>
               </div>
 
-              <div className="rounded-[26px] border border-[color:var(--border)] bg-[color:var(--surface-soft)] p-5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
-                  Stores outreached
-                </p>
-                <p className="mt-3 text-3xl font-semibold text-[color:var(--foreground)]">
-                  {stores.length}
-                </p>
-                <p className="mt-3 text-sm leading-6 text-[color:var(--muted-strong)]">
-                  Unique stores touched by outreach activity.
-                </p>
-              </div>
+              <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                <div className="rounded-[24px] border border-[color:var(--border)] bg-[color:var(--surface-strong)] p-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
+                    Calls Made
+                  </p>
+                  <p className="mt-2 text-2xl font-semibold text-[color:var(--foreground)]">
+                    {totalCallsMade}
+                  </p>
+                </div>
 
-              <div className="rounded-[26px] border border-[color:var(--border)] bg-[color:var(--surface-soft)] p-5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
-                  Average call time
-                </p>
-                <p className="mt-3 text-3xl font-semibold text-[color:var(--foreground)]">
-                  {averageCallTimeLabel}
-                </p>
-                <p className="mt-3 text-sm leading-6 text-[color:var(--muted-strong)]">
-                  Average duration across connected call records.
-                </p>
-              </div>
+                <div className="rounded-[24px] border border-[color:var(--border)] bg-[color:var(--surface-strong)] p-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
+                    Stores Outreached
+                  </p>
+                  <p className="mt-2 text-2xl font-semibold text-[color:var(--foreground)]">
+                    {stores.length}
+                  </p>
+                </div>
 
-              <div className="rounded-[26px] border border-[color:var(--border)] bg-[color:var(--surface-soft)] p-5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
-                  Answered calls
-                </p>
-                <p className="mt-3 text-3xl font-semibold text-[color:var(--foreground)]">
-                  {answeredCalls}
-                </p>
-                <p className="mt-3 text-sm leading-6 text-[color:var(--muted-strong)]">
-                  Calls that connected successfully.
-                </p>
-              </div>
+                <div className="rounded-[24px] border border-[color:var(--border)] bg-[color:var(--surface-strong)] p-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
+                    Average Call Time
+                  </p>
+                  <p className="mt-2 text-2xl font-semibold text-[color:var(--foreground)]">
+                    {averageCallTimeLabel}
+                  </p>
+                </div>
 
-              <div className="rounded-[26px] border border-[color:var(--border)] bg-[color:var(--surface-soft)] p-5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
-                  Transcripts available
-                </p>
-                <p className="mt-3 text-3xl font-semibold text-[color:var(--foreground)]">
-                  0
-                </p>
-                <p className="mt-3 text-sm leading-6 text-[color:var(--muted-strong)]">
-                  Calls with transcript records attached.
-                </p>
-              </div>
+                <div className="rounded-[24px] border border-[color:var(--border)] bg-[color:var(--surface-strong)] p-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
+                    Answered Calls
+                  </p>
+                  <p className="mt-2 text-2xl font-semibold text-[color:var(--foreground)]">
+                    {answeredCalls}
+                  </p>
+                </div>
 
-              <div className="rounded-[26px] border border-[color:var(--border)] bg-[color:var(--surface-soft)] p-5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
-                  Planned follow-ups
-                </p>
-                <p className="mt-3 text-3xl font-semibold text-[color:var(--foreground)]">
-                  {plannedFollowUpsCount}
-                </p>
-                <p className="mt-3 text-sm leading-6 text-[color:var(--muted-strong)]">
-                  Next-step items created from call outcomes.
-                </p>
+                <div className="rounded-[24px] border border-[color:var(--border)] bg-[color:var(--surface-strong)] p-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
+                    Missed Call Percentage
+                  </p>
+                  <p className="mt-2 text-2xl font-semibold text-[color:var(--foreground)]">
+                    {missedCallPercentageLabel}
+                  </p>
+                </div>
+
+                <div className="rounded-[24px] border border-[color:var(--border)] bg-[color:var(--surface-strong)] p-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
+                    Planned Follow-Ups
+                  </p>
+                  <p className="mt-2 text-2xl font-semibold text-[color:var(--foreground)]">
+                    {plannedFollowUpsCount}
+                  </p>
+                </div>
               </div>
             </div>
 
-            <div className="mt-5 rounded-[28px] border border-[color:var(--border)] bg-[color:var(--surface-soft)] p-5">
-              <div className="grid gap-4 md:grid-cols-3">
+            <div className="mt-4 rounded-[28px] border border-[color:var(--border)] bg-[color:var(--surface-soft)] p-4">
+              <div className="border-b border-[color:var(--border)] pb-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
+                  Selected Time Window
+                </p>
+                <h3 className="mt-2 text-xl font-semibold text-[color:var(--foreground)]">
+                  Recent History Slider Stats
+                </h3>
+              </div>
+
+              <div className="mt-4 grid gap-3 lg:grid-cols-2">
                 <div className="rounded-[22px] border border-[color:var(--border)] bg-[color:var(--surface-strong)] p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
-                    Recent window
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
+                    Look-Back Window
                   </p>
                   <p className="mt-2 text-lg font-semibold text-[color:var(--foreground)]">
-                    {visibleRecentCallRecords.length} calls shown
+                    {lookbackDays} Days
                   </p>
-                  <p className="mt-2 text-sm leading-6 text-[color:var(--muted-strong)]">
-                    Matches the current recent-history slider range.
-                  </p>
+                  <input
+                    type="range"
+                    min="7"
+                    max="180"
+                    step="1"
+                    value={lookbackDays}
+                    onChange={(event) => setLookbackDays(Number(event.target.value))}
+                    className="mt-3 w-full accent-[color:var(--accent)]"
+                  />
                 </div>
 
                 <div className="rounded-[22px] border border-[color:var(--border)] bg-[color:var(--surface-strong)] p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
-                    Missed call share
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
+                    Timeline Offset
                   </p>
                   <p className="mt-2 text-lg font-semibold text-[color:var(--foreground)]">
-                    {totalCallsMade > 0
-                      ? `${Math.round(
-                          (totalMissedCalls / totalCallsMade) * 100,
-                        )}%`
-                      : "0%"}
+                    {historyOffsetDays} Days Back
                   </p>
-                  <p className="mt-2 text-sm leading-6 text-[color:var(--muted-strong)]">
-                    Percentage of sample calls that were not answered.
+                  <input
+                    type="range"
+                    min="0"
+                    max="180"
+                    step="1"
+                    value={historyOffsetDays}
+                    onChange={(event) =>
+                      setHistoryOffsetDays(Number(event.target.value))
+                    }
+                    className="mt-3 w-full accent-[color:var(--accent)]"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                <div className="rounded-[20px] border border-[color:var(--border)] bg-[color:var(--surface-strong)] p-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
+                    Calls Made
+                  </p>
+                  <p className="mt-2 text-2xl font-semibold text-[color:var(--foreground)]">
+                    {callsMadeInHistoryWindow}
                   </p>
                 </div>
 
-                <div className="rounded-[22px] border border-[color:var(--border)] bg-[color:var(--surface-strong)] p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
-                    Transcript status
+                <div className="rounded-[20px] border border-[color:var(--border)] bg-[color:var(--surface-strong)] p-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
+                    Stores Outreached
                   </p>
-                  <p className="mt-2 text-lg font-semibold text-[color:var(--foreground)]">
-                    Intentionally empty
+                  <p className="mt-2 text-2xl font-semibold text-[color:var(--foreground)]">
+                    {storesInHistoryWindow}
                   </p>
-                  <p className="mt-2 text-sm leading-6 text-[color:var(--muted-strong)]">
-                    Sample call totals are populated, but transcript contents remain blank.
+                </div>
+
+                <div className="rounded-[20px] border border-[color:var(--border)] bg-[color:var(--surface-strong)] p-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
+                    Average Call Time
+                  </p>
+                  <p className="mt-2 text-2xl font-semibold text-[color:var(--foreground)]">
+                    {averageCallTimeInHistoryWindowLabel}
+                  </p>
+                </div>
+
+                <div className="rounded-[20px] border border-[color:var(--border)] bg-[color:var(--surface-strong)] p-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
+                    Answered Calls
+                  </p>
+                  <p className="mt-2 text-2xl font-semibold text-[color:var(--foreground)]">
+                    {answeredCallsInHistoryWindow}
+                  </p>
+                </div>
+
+                <div className="rounded-[20px] border border-[color:var(--border)] bg-[color:var(--surface-strong)] p-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
+                    Missed Call Percentage
+                  </p>
+                  <p className="mt-2 text-2xl font-semibold text-[color:var(--foreground)]">
+                    {missedCallPercentageInHistoryWindowLabel}
+                  </p>
+                </div>
+
+                <div className="rounded-[20px] border border-[color:var(--border)] bg-[color:var(--surface-strong)] p-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
+                    Planned Follow-Ups
+                  </p>
+                  <p className="mt-2 text-2xl font-semibold text-[color:var(--foreground)]">
+                    {plannedFollowUpsInHistoryWindowCount}
                   </p>
                 </div>
               </div>

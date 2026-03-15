@@ -398,7 +398,7 @@ export function OttawaGroceryMap({
       >
         <div className="max-w-lg">
           <p className="text-lg font-semibold text-[color:var(--foreground)]">
-            Add your Mapbox token to load Ottawa grocery stores
+            Add Your Mapbox Token To Load Ottawa Grocery Stores
           </p>
           <p className="mt-3 text-sm leading-6 text-[color:var(--muted-strong)]">
             Set <code>NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN</code> in
