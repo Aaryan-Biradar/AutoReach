@@ -42,3 +42,13 @@ body {
 ::selection {
   background: rgba(245, 166, 35, 0.24);
 }
+
+@keyframes landing-bg-shift {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}

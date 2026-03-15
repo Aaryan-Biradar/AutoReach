@@ -53,7 +53,8 @@ async def start_call(req: StartCallRequest | None = None):
         req.phone_number if req and req.phone_number else CUSTOMER_PHONE_NUMBER
     )
     if not target_number:
-        raise HTTPException(status_code=400, detail="No phone number provided")
+        logger.warning("POST /calls/start — no phone number (set CUSTOMER_PHONE_NUMBER in .env or send phone_number in body)")
+        raise HTTPException(status_code=400, detail="No phone number provided. Set CUSTOMER_PHONE_NUMBER in .env or send { \"phone_number\": \"+1...\" } in the request body.")
 
     ngrok_url = await get_ngrok_url()
     logger.info("Using ngrok tunnel: %s", ngrok_url)
