@@ -342,54 +342,8 @@ const tabs: {
   },
 ];
 
-function MetricCard({
-  label,
-  value,
-  onClick,
-  tone = "default",
-}: {
-  label: string;
-  value?: string;
-  onClick?: () => void;
-  tone?: "default" | "accent";
-}) {
-  const sharedClassName =
-    "rounded-3xl border border-[color:var(--border)] bg-[color:var(--surface-strong)] px-4 py-2.5 shadow-[0_18px_45px_-32px_rgba(20,20,20,0.14)]";
-  const accentClassName =
-    "border-[color:var(--border-strong)] bg-[color:var(--accent)] text-[#1f1c19] hover:bg-[color:var(--accent-strong)]";
-  const defaultClassName =
-    "text-left transition hover:border-[color:var(--border-strong)] hover:bg-[#fff3df]";
-  const labelClassName =
-    tone === "accent"
-      ? "text-[11px] font-semibold uppercase tracking-[0.2em] text-[#1f1c19]"
-      : "text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]";
-  const valueClassName =
-    tone === "accent"
-      ? "mt-2 text-2xl font-semibold text-[#1f1c19]"
-      : "mt-2 text-2xl font-semibold text-[color:var(--foreground)]";
-
-  if (onClick) {
-    return (
-      <button
-        type="button"
-        onClick={onClick}
-        className={`${sharedClassName} ${defaultClassName} ${tone === "accent" ? accentClassName : ""}`}
-      >
-        <p className={labelClassName}>{label}</p>
-        {value ? (
-          <p className={valueClassName}>{value}</p>
-        ) : null}
-      </button>
-    );
-  }
-
-  return (
-    <div className={sharedClassName}>
-      <p className={labelClassName}>{label}</p>
-      {value ? <p className={valueClassName}>{value}</p> : null}
-    </div>
-  );
-}
+const heroActionClassName =
+  "inline-flex items-center rounded-full border border-[color:var(--border-strong)] bg-[color:var(--accent)] px-4 py-2.5 text-sm font-medium text-[color:var(--foreground)] transition hover:bg-[color:var(--accent-strong)]";
 
 export default function Home() {
   const [stores, setStores] = useState<StoreRecord[]>([]);
@@ -459,6 +413,9 @@ export default function Home() {
     stores.find((store) => store.id === selectedStoreId) ?? null;
   const selectedStoreIsBackendTarget =
     selectedStore?.integrationMode === "backend-target";
+  const selectedStorePhoneNumber = selectedStoreIsBackendTarget
+    ? (selectedStore?.phoneNumber?.trim() || "(___) ___-____")
+    : selectedStore?.phoneNumber ?? null;
   const activeTabMeta = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
   const queuedCallLabel = selectedStore ? queuedCalls[selectedStore.id] ?? null : null;
   const pendingCallsTotal =
@@ -690,18 +647,18 @@ export default function Home() {
                 href="https://www.foodforthecapital.ca/?utm_source=ig&utm_medium=social&utm_content=link_in_bio"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center rounded-full border border-[color:var(--border-strong)] bg-[color:var(--accent)] px-4 py-2.5 text-sm font-medium text-[color:var(--foreground)] transition hover:bg-[color:var(--accent-strong)]"
+                className={heroActionClassName}
               >
                 Visit Food for the Capital
               </a>
 
-              <div className="grid grid-cols-1">
-                <MetricCard
-                  label="Call Statistics"
-                  onClick={() => setIsStatsOpen(true)}
-                  tone="accent"
-                />
-              </div>
+              <button
+                type="button"
+                onClick={() => setIsStatsOpen(true)}
+                className={heroActionClassName}
+              >
+                Call Statistics
+              </button>
             </div>
           </div>
         </section>
@@ -711,10 +668,10 @@ export default function Home() {
             <div className="rounded-[30px] border border-[color:var(--border)] bg-[color:var(--surface)] p-5 shadow-[0_24px_80px_-46px_rgba(20,20,20,0.16)] backdrop-blur sm:p-6">
               <div className="max-w-xs">
                 <h2 className="text-xl font-semibold text-[color:var(--foreground)]">
-                  Store controls
+                  Store Controls and Visual Map
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-[color:var(--muted-strong)]">
-                  Search Ottawa grocery stores and open the full recent-history view from one place.
+                  Search Ottawa grocery stores, review recent call history, and jump into the visual map from one place.
                 </p>
               </div>
 
@@ -811,44 +768,46 @@ export default function Home() {
               </div>
 
               <div className="mt-5 border-t border-[color:var(--border)] pt-5">
-                <button
-                  type="button"
-                  onClick={() => setIsHistoryOpen(true)}
-                  className="w-full rounded-[24px] border border-[color:var(--border-strong)] bg-[color:var(--surface-soft)] px-4 py-4 text-left transition hover:bg-[#fff3df]"
-                >
-                  <span className="block text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
-                    All stores
-                  </span>
-                  <span className="mt-2 block text-lg font-semibold text-[color:var(--foreground)]">
-                    Recent call history
-                  </span>
-                  <span className="mt-2 block text-sm leading-6 text-[color:var(--muted-strong)]">
-                    Open the full recent-history view and use the sliders to move further back in time.
-                  </span>
-                </button>
+                <div className="space-y-3 rounded-[28px] border border-[color:var(--border-strong)] bg-[color:var(--surface-soft)] p-3">
+                  <button
+                    type="button"
+                    onClick={queueCallsForRedStores}
+                    disabled={unqueuedRedStores.length === 0}
+                    className="w-full rounded-[24px] border border-[color:var(--border)] bg-[color:var(--surface-strong)] px-4 py-4 text-left transition hover:border-[color:var(--border-strong)] hover:bg-[#fff3df] disabled:cursor-not-allowed disabled:border-[color:var(--border)] disabled:bg-[color:var(--surface-soft)] disabled:opacity-70"
+                  >
+                    <span className="block text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
+                      Priority follow-up
+                    </span>
+                    <span className="mt-2 block text-lg font-semibold text-[color:var(--foreground)]">
+                      Queue follow-up calls
+                    </span>
+                    <span className="mt-2 block text-sm leading-6 text-[color:var(--muted-strong)]">
+                      {unqueuedRedStores.length > 0
+                        ? `${unqueuedRedStores.length} priority locations will be added to the follow-up queue.`
+                        : redStores.length > 0
+                          ? "All priority locations are already queued."
+                          : "No priority locations are currently available for follow-up."}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsHistoryOpen(true)}
+                    className="w-full rounded-[24px] border border-[color:var(--border)] bg-[color:var(--surface-strong)] px-4 py-4 text-left transition hover:border-[color:var(--border-strong)] hover:bg-[#fff3df]"
+                  >
+                    <span className="block text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
+                      All stores
+                    </span>
+                    <span className="mt-2 block text-lg font-semibold text-[color:var(--foreground)]">
+                      Recent call history
+                    </span>
+                    <span className="mt-2 block text-sm leading-6 text-[color:var(--muted-strong)]">
+                      Open the full recent-history view and use the sliders to move further back in time.
+                    </span>
+                  </button>
+                </div>
               </div>
             </div>
-
-            <button
-              type="button"
-              onClick={queueCallsForRedStores}
-              disabled={unqueuedRedStores.length === 0}
-              className="rounded-[28px] border border-[color:var(--border-strong)] bg-[color:var(--surface)] p-5 text-left shadow-[0_24px_80px_-46px_rgba(20,20,20,0.16)] transition hover:bg-[#fff3df] disabled:cursor-not-allowed disabled:border-[color:var(--border)] disabled:bg-[color:var(--surface-soft)] disabled:opacity-70 sm:p-6"
-            >
-              <span className="block text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
-                Priority follow-up
-              </span>
-              <span className="mt-2 block text-lg font-semibold text-[color:var(--foreground)]">
-                Queue follow-up calls
-              </span>
-              <span className="mt-2 block text-sm leading-6 text-[color:var(--muted-strong)]">
-                {unqueuedRedStores.length > 0
-                  ? `${unqueuedRedStores.length} priority locations will be added to the follow-up queue.`
-                  : redStores.length > 0
-                    ? "All priority locations are already queued."
-                    : "No priority locations are currently available for follow-up."}
-              </span>
-            </button>
 
           </div>
 
@@ -887,19 +846,9 @@ export default function Home() {
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
                   Store details
                 </p>
-                {selectedStoreIsBackendTarget ? (
-                  <div className="mt-3 inline-flex rounded-full border border-[color:var(--border-strong)] bg-[#fff3df] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[color:var(--foreground)]">
-                    Backend integration target
-                  </div>
-                ) : null}
                 <h2 className="mt-2 break-words text-2xl font-semibold text-[color:var(--foreground)] sm:text-3xl">
                   {selectedStore ? selectedStore.name : "Selected store"}
                 </h2>
-                <p className="mt-2 text-sm leading-6 text-[color:var(--muted-strong)]">
-                  {selectedStoreIsBackendTarget
-                    ? "This is the only store designated for backend integration. Review its call history, transcripts, map location, missed calls, and pending call timing here."
-                    : "This store remains a frontend sample location. Review its call history, transcripts, map location, missed calls, and pending call timing here."}
-                </p>
               </div>
               <button
                 type="button"
@@ -950,13 +899,13 @@ export default function Home() {
                   <p className="mt-3 text-sm leading-6 text-[color:var(--muted-strong)]">
                     {selectedStore?.address ?? "Not available yet"}
                   </p>
-                  {selectedStore?.phoneNumber ? (
+                  {selectedStorePhoneNumber ? (
                     <div className="mt-4 rounded-[20px] border border-[color:var(--border)] bg-[color:var(--surface-strong)] px-4 py-3">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
                         Phone number
                       </p>
                       <p className="mt-2 text-sm text-[color:var(--muted-strong)]">
-                        {selectedStore.phoneNumber}
+                        {selectedStorePhoneNumber}
                       </p>
                     </div>
                   ) : null}
@@ -968,23 +917,25 @@ export default function Home() {
                       {selectedStore?.lastCalledLabel ?? "Not available yet"}
                     </p>
                   </div>
-                  <div className="mt-4 rounded-[20px] border border-[color:var(--border)] bg-[color:var(--surface-strong)] px-4 py-3">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
-                      Integration status
-                    </p>
-                    <p className="mt-2 text-sm text-[color:var(--muted-strong)]">
-                      {selectedStoreIsBackendTarget
-                        ? "Connected as the dedicated backend integration target."
-                        : "Frontend-only sample store."}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsMapOpen(true)}
-                    className="mt-4 rounded-full border border-[color:var(--border-strong)] bg-[color:var(--accent)] px-4 py-2 text-sm font-medium text-[color:var(--foreground)] transition hover:bg-[color:var(--accent-strong)]"
-                  >
-                    Open map view
-                  </button>
+                  {selectedStoreIsBackendTarget ? (
+                    <>
+                      <div className="mt-4 rounded-[20px] border border-[color:var(--border)] bg-[color:var(--surface-strong)] px-4 py-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
+                          Integration status
+                        </p>
+                        <p className="mt-2 text-sm text-[color:var(--muted-strong)]">
+                          Connected as the dedicated backend integration target.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsMapOpen(true)}
+                        className="mt-4 rounded-full border border-[color:var(--border-strong)] bg-[color:var(--accent)] px-4 py-2 text-sm font-medium text-[color:var(--foreground)] transition hover:bg-[color:var(--accent-strong)]"
+                      >
+                        Open map view
+                      </button>
+                    </>
+                  ) : null}
                 </div>
 
                 <div className="grid gap-4">
