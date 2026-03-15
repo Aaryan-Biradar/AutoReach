@@ -7,7 +7,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 
 from services.langchain_agent import get_agent_response
-from services.call_events import push_event
+from services.call_events import push_event, get_single_active_call_id
 
 logger = logging.getLogger(__name__)
 
@@ -41,9 +41,6 @@ async def chat_completions(request: Request):
     body = await request.json()
     messages = body.get("messages", [])
     logger.info("/chat/completions — %d messages received", len(messages))
-    # #region agent log
-    _dbg("H2", "vapi_webhook.py:chat_completions:entry", "chat_completions called", {"num_messages": len(messages), "roles": [m.get("role","") for m in messages[:5]]})
-    # #endregion
 
     conversation: list[dict] = []
     for m in messages:
@@ -57,21 +54,11 @@ async def chat_completions(request: Request):
     if not conversation:
         conversation = [{"role": "user", "content": "Hello"}]
 
-    # #region agent log
-    _dbg("H2", "vapi_webhook.py:chat_completions:conv", "conversation built", {"num_turns": len(conversation), "last_content": conversation[-1]["content"][:100] if conversation else ""})
-    # #endregion
-
     t0 = time.time()
     try:
         response_text = await get_agent_response(conversation)
-        # #region agent log
-        _dbg("H3", "vapi_webhook.py:chat_completions:agent_ok", "agent responded", {"elapsed_ms": int((time.time()-t0)*1000), "response_preview": response_text[:200]})
-        # #endregion
-    except Exception as exc:
+    except Exception:
         logger.exception("Agent error in /chat/completions")
-        # #region agent log
-        _dbg("H3", "vapi_webhook.py:chat_completions:agent_err", "agent EXCEPTION", {"elapsed_ms": int((time.time()-t0)*1000), "error": str(exc)[:300]})
-        # #endregion
         response_text = "I appreciate your time. Could you hold on just one moment?"
 
     elapsed = int((time.time() - t0) * 1000)
@@ -127,6 +114,26 @@ async def chat_completions(request: Request):
 # in-memory event bus so the frontend SSE stream picks them up.
 # ---------------------------------------------------------------------------
 
+def _normalize_transcript_message(message: dict) -> dict:
+    """Normalize Vapi transcript event so frontend always sees type/transcriptType.
+
+    Vapi may send type as "transcript[transcriptType=\"final\"]" instead of
+    type "transcript" + transcriptType "final". Copy to a new dict so we don't mutate the original.
+    """
+    msg_type = message.get("type", "")
+    if not msg_type.startswith("transcript"):
+        return message
+
+    out = dict(message)
+    out["type"] = "transcript"
+    if "transcriptType" not in out or not out["transcriptType"]:
+        if 'transcriptType="final"' in msg_type or "final" in msg_type:
+            out["transcriptType"] = "final"
+        else:
+            out["transcriptType"] = "partial"
+    return out
+
+
 @router.post("/vapi/webhook")
 async def vapi_webhook(request: Request):
     body = await request.json()
@@ -136,15 +143,30 @@ async def vapi_webhook(request: Request):
         return {"ok": True}
 
     msg_type = message.get("type", "unknown")
-    call_id = message.get("call", {}).get("id")
+    call = message.get("call") or body.get("call")
+    call_id = call.get("id") if isinstance(call, dict) else None
+
+    if msg_type.startswith("transcript"):
+        message = _normalize_transcript_message(message)
+        msg_type = "transcript"
+
+    # Vapi sometimes omits "call" from transcript/status payloads; use the only active call as fallback
+    if not call_id and msg_type in ("transcript", "status-update", "end-of-call-report"):
+        call_id = get_single_active_call_id()
 
     logger.info("Vapi webhook — type=%s call=%s", msg_type, call_id)
-
-    # #region agent log
-    _dbg("H5", "vapi_webhook.py:webhook:recv", "webhook event received", {"type": msg_type, "call_id": call_id})
-    # #endregion
 
     if call_id and msg_type in ("transcript", "status-update", "end-of-call-report", "conversation-update"):
         push_event(call_id, message)
 
     return {"ok": True}
+
+
+# ---------------------------------------------------------------------------
+# POST / — Vapi sometimes sends server-message webhooks to the base URL
+# instead of /vapi/webhook. Accept them here and handle the same way.
+# ---------------------------------------------------------------------------
+
+@router.post("/")
+async def root_webhook(request: Request):
+    return await vapi_webhook(request)

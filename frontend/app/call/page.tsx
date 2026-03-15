@@ -200,7 +200,7 @@ function TranscriptPanel({
           </p>
         ) : (
           allMessages.map((msg, i) => {
-            const isAgent = msg.role === "assistant" || msg.role === "bot";
+            const isAgent = msg.role === "assistant" || msg.role === "bot" || msg.role === "ai";
             const isLast = i === allMessages.length - 1;
             const isPartialMsg = isLast && hasPartial;
             return (
@@ -261,6 +261,7 @@ export default function CallPage() {
   const [messages, setMessages] = useState<TranscriptMessage[]>([]);
   const [partial, setPartial] = useState<TranscriptMessage | null>(null);
   const esRef = useRef<EventSource | null>(null);
+  const streamErrorCountRef = useRef(0);
 
   const closeStream = useCallback(() => {
     if (esRef.current) {
@@ -272,18 +273,22 @@ export default function CallPage() {
   const openStream = useCallback(
     (id: string) => {
       closeStream();
+      streamErrorCountRef.current = 0;
       const es = new EventSource(`${API_URL}/api/calls/${id}/stream`);
       esRef.current = es;
 
       es.onmessage = (event) => {
+        streamErrorCountRef.current = 0; // reset on successful message
         try {
           const msg = JSON.parse(event.data);
           const msgType = msg.type as string;
 
-          if (msgType === "transcript") {
-            const role = msg.role as string;
-            const text = msg.transcript as string;
-            const transcriptType = msg.transcriptType as string;
+          if (msgType === "transcript" || (typeof msgType === "string" && msgType.startsWith("transcript"))) {
+            const role = (msg.role as string) || "user";
+            const text = typeof msg.transcript === "string" ? msg.transcript.trim() : "";
+            const transcriptType = (msg.transcriptType as string) || "partial";
+
+            if (!text) return;
 
             if (transcriptType === "final") {
               setPartial(null);
@@ -312,7 +317,9 @@ export default function CallPage() {
       };
 
       es.onerror = () => {
-        closeStream();
+        // Don't close on first error (browsers sometimes fire once on connect); close after repeated failures
+        streamErrorCountRef.current += 1;
+        if (streamErrorCountRef.current >= 2) closeStream();
       };
     },
     [closeStream],

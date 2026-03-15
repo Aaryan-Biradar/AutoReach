@@ -1,22 +1,56 @@
-Source: SimpliCity Ottawa Food Resources spreadsheet provided by the user.
+---
+title: Ottawa Food Bank Resource Directory
+source: SimpliCity Ottawa Food Resources Spreadsheet (provided by user)
+category: context / food banks
+last_updated: 2026
+use_when: >
+  A store contact wants to know which food bank or neighbourhood would benefit
+  from their partnership. Use when a manager asks for local specificity (e.g.,
+  "will donations stay in Bells Corners?"), when discussing which organizations
+  FFTC supports, or when providing context about the Ottawa food support network.
+  Avoid reciting full hours unless directly relevant.
+---
 
-This document helps the agent speak accurately about Ottawa-area food support organizations that FFTC may reference.
+# OTTAWA FOOD BANK RESOURCE DIRECTORY
+## Supporting Context for FFTC Outreach
 
-Examples of Ottawa food resources in the spreadsheet:
-- Ottawa Food Bank, 2001 Bantree Street, Monday to Friday, 8:00 a.m. to 4:00 p.m., wheelchair accessible
-- Kanata Food Cupboard, 1240 Teron Road Unit 3, Monday to Friday, 8:00 a.m. to 3:00 p.m., in-person shopping and pickup or delivery, wheelchair accessible
-- Stittsville Food Bank, 1631 Main Street, donation drop-offs in the morning and pickup by appointment, wheelchair accessible
-- FAMSAC Food Cupboard, 3865 Old Richmond Road, reachable Monday to Thursday mornings, wheelchair accessible
-- Britannia Woods Food Pantry, 115 Ritchie Street Unit 9, open on Tuesdays, Thursdays, and Fridays, wheelchair accessible
-- Westboro Region Food Bank, 354 Madison Avenue, mix of appointment and drop-in windows, partially accessible
-- Parkdale Food Centre, 5 Hamilton Avenue North, appointment and drop-in model, wheelchair accessible
-- Centretown Community Food Centre, 370 Catherine Street, wheelchair accessible
-- Rideau-Rockcliffe Emergency Food Bank, 815 St. Laurent Boulevard, wheelchair accessible
-- Gloucester Emergency Food, 2040 Arrowsmith Road, appointment-based service windows, partially accessible
+---
 
-Use cases for this context:
-- when a store wants to know which local food bank or area may benefit
-- when the conversation involves keeping donations hyper-local
-- when the caller wants to understand the broader Ottawa food support network
+## OVERVIEW
 
-Do not quote hours unless they are directly relevant, and avoid overloading the caller with details.
+The following organizations are part of Ottawa's food support network. FFTC
+partner food banks are drawn from this broader directory. Use this document to
+speak accurately about where donations go and which communities are served.
+
+---
+
+## FOOD BANK DIRECTORY
+
+| Organization                        | Address                          | Key Notes                                    |
+|-------------------------------------|----------------------------------|----------------------------------------------|
+| Ottawa Food Bank                    | 2001 Bantree Street              | Mon–Fri, 8 AM–4 PM; wheelchair accessible    |
+| Kanata Food Cupboard                | 1240 Teron Road, Unit 3          | Mon–Fri, 8 AM–3 PM; in-person / delivery; accessible |
+| Stittsville Food Bank               | 1631 Main Street                 | Drop-offs in mornings; pickup by appointment; accessible |
+| FAMSAC Food Cupboard                | 3865 Old Richmond Road           | Mon–Thu mornings; accessible                 |
+| Britannia Woods Food Pantry         | 115 Ritchie Street, Unit 9       | Tue, Thu, Fri; accessible                    |
+| Westboro Region Food Bank           | 354 Madison Avenue               | Mix of appointment and drop-in; partially accessible |
+| Parkdale Food Centre                | 5 Hamilton Avenue North          | Appointment and drop-in; accessible          |
+| Centretown Community Food Centre    | 370 Catherine Street             | Wheelchair accessible                        |
+| Rideau-Rockcliffe Emergency Food Bank | 815 St. Laurent Boulevard      | Wheelchair accessible                        |
+| Gloucester Emergency Food           | 2040 Arrowsmith Road             | Appointment-based; partially accessible      |
+| Barrhaven Food Cupboard             | Barrhaven area                   | FFTC partner; recognized FFTC contributions  |
+| Shepherds of Good Hope              | Ottawa (multiple locations)      | FFTC beneficiary organization                |
+
+---
+
+## USAGE GUIDANCE
+
+- If a store in Bells Corners or the west end asks about local impact, reference
+  FAMSAC Food Cupboard (Old Richmond Road) or Kanata Food Cupboard.
+- If a store near Barrhaven asks, reference Barrhaven Food Cupboard specifically —
+  FFTC has a recognized relationship with this organization.
+- For east-end stores, Rideau-Rockcliffe Emergency Food Bank or Gloucester Emergency
+  Food may be most geographically relevant.
+- Do not overwhelm the caller with the full list. Mention one or two nearby organizations
+  that are relevant to their location.
+- Accessibility information is available if a caller asks about inclusiveness of partner organizations.

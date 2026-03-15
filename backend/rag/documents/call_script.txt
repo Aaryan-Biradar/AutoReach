@@ -1,43 +1,69 @@
-FOOD FOR THE CAPITAL — OUTREACH CALL SCRIPT
+---
+title: Outreach Call Script
+source: Food for the Capital — Internal Operations
+category: outreach / scripts
+last_updated: 2026
+use_when: >
+  Agent is conducting or coaching a store outreach call. Covers all three stages
+  of the call: reaching the gatekeeper, pitching to the manager, and closing.
+  Also use when the agent needs exact phrasing for standard responses.
+---
 
-=== STAGE 1: GATEKEEPER ===
+# OUTREACH CALL SCRIPT
+## Food for the Capital (FFTC)
 
-Opening Greeting:
+---
+
+## STAGE 1 — GATEKEEPER
+
+**Opening Greeting**
 "Hello, I hope you are doing well. I am calling on behalf of Food for the Capital."
 
-Ask for Manager:
+**Ask for Manager**
 "Could I please speak to your manager?"
 
-If asked for context before transferring:
+**If asked for context before transferring**
 "I'm calling about a local community initiative to see if we might be able to partner with your location for a food drive."
 
-=== STAGE 2: MANAGER PITCH ===
+---
 
-Introduction:
+## STAGE 2 — MANAGER PITCH
+
+**Introduction**
 "Hello, my name is Alex and I am one of the executives of Food for the Capital."
 
-The Hook:
+**The Hook**
 "We are a group of local high school students looking to help out in our community by hosting food drives to collect donations for local Ottawa food banks."
 
-Credibility / Impact Statement:
-"Our previous events have raised over 17,000 pounds of food and $17,000 for many food banks across Ottawa."
+**Credibility / Impact Statement**
+"Our previous events have close to 20,000 pounds of food and $20,000 for many food banks across Ottawa."
 
-The Core Ask:
+**The Core Ask**
 "We were wondering if it would be possible to set up a booth in front of your store with 2 volunteers and 1 of our executives present to collect donations. Our events typically run on weekends from 10 AM to 2 PM."
 
-If the store has partnered before:
-"We have worked with your stores in our past events and it has benefited both parties greatly and we would love to work with you again."
+**If the store has partnered before**
+"We have worked with your stores in our past events and it has benefited both parties greatly, and we would love to work with you again."
 
-=== STAGE 3: CLOSING ===
+---
 
-If YES (Store Agrees):
+## STAGE 3 — CLOSING
+
+**If YES (Store Agrees)**
 "Thank you so much, we really appreciate your support. Just to confirm, our events typically run from 10 AM to 2 PM on weekends. Could I get your email address so I can send over the formal approval PDF and our promotional poster?"
 
-If NO (Store Policy / Decline):
+**If NO (Store Policy / Decline)**
 "I completely understand that corporate policies can be strict. Thank you so much for your time and all the work you do for the community. Have a great day."
 
-If NEEDS MORE INFO:
+**If NEEDS MORE INFO**
 "I'd be happy to email you our full information package. What is the best email address to send that to?"
 
-If ASKED TO CALL BACK:
+**If ASKED TO CALL BACK**
 "Absolutely, I completely understand. What day and time works best for me to call back?"
+
+---
+
+## AGENT NOTES
+- Always confirm email address before ending a positive call.
+- Capture callback day and time precisely — do not leave it vague.
+- If a store has partnered before, use the repeat-partner line to reinforce the relationship.
+- Do not deviate from the impact figures cited above without updated data from the results document.

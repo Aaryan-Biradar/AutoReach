@@ -2,7 +2,6 @@ import asyncio
 import json
 import logging
 import os
-import time as _time
 
 import httpx
 from fastapi import APIRouter, HTTPException
@@ -13,13 +12,6 @@ from services.ngrok import get_ngrok_url
 from services.call_events import get_queue, remove_queue
 
 logger = logging.getLogger(__name__)
-
-# #region agent log
-_DBG_LOG = "/Users/larry/AutoReach/.cursor/debug-80e04a.log"
-def _dbg(hypothesisId, location, message, data=None):
-    line = json.dumps({"sessionId":"80e04a","hypothesisId":hypothesisId,"location":location,"message":message,"data":data or {},"timestamp":int(_time.time()*1000)})
-    with open(_DBG_LOG, "a") as f: f.write(line + "\n")
-# #endregion
 
 router = APIRouter()
 
@@ -66,10 +58,6 @@ async def start_call(req: StartCallRequest | None = None):
     ngrok_url = await get_ngrok_url()
     logger.info("Using ngrok tunnel: %s", ngrok_url)
 
-    # #region agent log
-    _dbg("H1", "vapi_calls.py:start_call:ngrok", "ngrok URL resolved", {"ngrok_url": ngrok_url})
-    # #endregion
-
     payload = {
         "assistantId": ASSISTANT_ID,
         "phoneNumberId": PHONE_NUMBER_ID,
@@ -90,10 +78,6 @@ async def start_call(req: StartCallRequest | None = None):
         },
     }
 
-    # #region agent log
-    _dbg("H2", "vapi_calls.py:start_call:payload", "Vapi call payload", {"assistantId": ASSISTANT_ID[:8] if ASSISTANT_ID else "EMPTY", "phoneNumberId": PHONE_NUMBER_ID[:8] if PHONE_NUMBER_ID else "EMPTY", "model_url": ngrok_url, "server_url": ngrok_url})
-    # #endregion
-
     async with httpx.AsyncClient() as client:
         resp = await client.post(
             f"{VAPI_BASE}/call",
@@ -103,9 +87,6 @@ async def start_call(req: StartCallRequest | None = None):
         )
 
     if resp.status_code != 201:
-        # #region agent log
-        _dbg("H2", "vapi_calls.py:start_call:vapi_err", "Vapi API error", {"status": resp.status_code, "body": resp.text[:300]})
-        # #endregion
         raise HTTPException(
             status_code=resp.status_code,
             detail=f"Vapi error: {resp.text}",
@@ -113,9 +94,6 @@ async def start_call(req: StartCallRequest | None = None):
 
     data = resp.json()
     call_id = data["id"]
-    # #region agent log
-    _dbg("H2", "vapi_calls.py:start_call:success", "call created", {"call_id": call_id, "status": data.get("status")})
-    # #endregion
 
     # Pre-create the event queue so webhook events aren't dropped
     get_queue(call_id)
