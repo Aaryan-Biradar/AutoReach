@@ -2,7 +2,12 @@
 
 import { useDeferredValue, useEffect, useState } from "react";
 import { OttawaGroceryMap } from "./components/ottawa-grocery-map";
-import type { CallFreshness, DashboardTab, StoreRecord } from "./dashboard-types";
+import type {
+  CallFreshness,
+  DashboardTab,
+  StoreIntegrationMode,
+  StoreRecord,
+} from "./dashboard-types";
 
 const MAPBOX_ACCESS_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
 const OTTAWA_GROCERY_SEARCH_URL = "https://api.mapbox.com/search/searchbox/v1/category";
@@ -30,6 +35,26 @@ type MapboxSearchFeature = {
     };
   };
 };
+
+type MockCallRecord = {
+  id: string;
+  storeId: string;
+  storeName: string;
+  storeAddress: string;
+  occurredAtLabel: string;
+  relativeAgeLabel: string;
+  outcome: "Answered" | "Missed" | "Callback requested";
+  durationLabel: string;
+  durationSeconds: number;
+  daysAgo: number;
+};
+
+const MOCK_REFERENCE_DATE = new Date("2026-03-14T12:00:00-04:00");
+const DATE_TIME_FORMATTER = new Intl.DateTimeFormat("en-CA", {
+  dateStyle: "medium",
+  timeStyle: "short",
+  timeZone: "America/Toronto",
+});
 
 function buildOttawaQueryBboxes(gridSize: number) {
   const [minLng, minLat, maxLng, maxLat] = OTTAWA_BBOX;
@@ -90,6 +115,31 @@ function formatDuration(totalSeconds: number) {
   return `${minutes}m ${seconds.toString().padStart(2, "0")}s`;
 }
 
+function formatRelativeAge(hoursAgo: number) {
+  if (hoursAgo < 24) {
+    return `${hoursAgo}h ago`;
+  }
+
+  const daysSince = Math.floor(hoursAgo / 24);
+
+  if (daysSince <= 30) {
+    return `${daysSince}d ago`;
+  }
+
+  if (daysSince <= 60) {
+    return `${Math.max(2, Math.round(daysSince / 7))}w ago`;
+  }
+
+  return `${Math.max(2, Math.round(daysSince / 30))}mo ago`;
+}
+
+function buildMockPhoneNumber(seedSource: string) {
+  const seed = hashValue(seedSource);
+  const areaCode = seed % 2 === 0 ? "613" : "343";
+  const reservedSuffix = (seed % 100).toString().padStart(2, "0");
+  return `(${areaCode}) 555-01${reservedSuffix}`;
+}
+
 function buildMockStoreMetrics(seedSource: string) {
   const seed = hashValue(seedSource);
   const hoursSinceLastCall = 6 + (seed % (24 * 90));
@@ -99,7 +149,6 @@ function buildMockStoreMetrics(seedSource: string) {
   const pendingCallOffsetHours = 8 + ((seed >> 7) % 60);
   const pendingCallDate = new Date("2026-03-16T09:00:00-04:00");
   pendingCallDate.setHours(pendingCallDate.getHours() + pendingCallOffsetHours);
-  const daysSinceLastCall = Math.floor(hoursSinceLastCall / 24);
   const callFreshness: CallFreshness =
     hoursSinceLastCall <= 24 * 30
       ? "recent"
@@ -109,16 +158,10 @@ function buildMockStoreMetrics(seedSource: string) {
 
   return {
     lastCalledHoursAgo: hoursSinceLastCall,
-    lastCalledLabel:
-      hoursSinceLastCall < 24
-        ? `${hoursSinceLastCall}h ago`
-        : daysSinceLastCall <= 30
-          ? `${daysSinceLastCall}d ago`
-          : daysSinceLastCall <= 60
-            ? `${Math.max(2, Math.round(daysSinceLastCall / 7))}w ago`
-            : `${Math.max(2, Math.round(daysSinceLastCall / 30))}mo ago`,
+    lastCalledLabel: formatRelativeAge(hoursSinceLastCall),
     callFreshness,
     missedCalls,
+    averageCallDurationSeconds,
     averageCallDurationLabel: formatDuration(averageCallDurationSeconds),
     pendingCallsCount,
     nextPendingCallLabel:
@@ -134,6 +177,93 @@ function buildMockStoreMetrics(seedSource: string) {
         : "No pending calls scheduled",
   };
 }
+
+function buildMockCallRecords(store: StoreRecord) {
+  const seed = hashValue(`${store.id}-call-history`);
+  const totalCalls = Math.max(store.missedCalls + 2, 3 + (seed % 5));
+  const answeredSlots = totalCalls - store.missedCalls;
+  const callbackOffset =
+    store.pendingCallsCount > 0 && answeredSlots > 0
+      ? (seed >> 3) % answeredSlots
+      : -1;
+  const records: MockCallRecord[] = [];
+
+  for (let index = 0; index < totalCalls; index += 1) {
+    const hoursAgo =
+      store.lastCalledHoursAgo +
+      index * (12 + ((seed >> ((index % 6) + 1)) % 40));
+    const daysAgo = Number((hoursAgo / 24).toFixed(1));
+    const occurredAt = new Date(
+      MOCK_REFERENCE_DATE.getTime() - hoursAgo * 60 * 60 * 1000,
+    );
+    const answeredIndex = index - store.missedCalls;
+    const outcome =
+      index < store.missedCalls
+        ? "Missed"
+        : answeredIndex === callbackOffset
+          ? "Callback requested"
+          : "Answered";
+    const durationSeconds =
+      outcome === "Missed"
+        ? 0
+        : Math.max(
+            50,
+            store.averageCallDurationSeconds +
+              (((seed >> ((index % 8) + 2)) % 70) - 35),
+          );
+
+    records.push({
+      id: `${store.id}-call-${index + 1}`,
+      storeId: store.id,
+      storeName: store.name,
+      storeAddress: store.address,
+      occurredAtLabel: DATE_TIME_FORMATTER.format(occurredAt),
+      relativeAgeLabel: formatRelativeAge(hoursAgo),
+      outcome,
+      durationLabel: outcome === "Missed" ? "0m 00s" : formatDuration(durationSeconds),
+      durationSeconds,
+      daysAgo,
+    });
+  }
+
+  return records;
+}
+
+function buildManualStoreRecord({
+  id,
+  name,
+  address,
+  longitude,
+  latitude,
+  integrationMode = "frontend-sample",
+  phoneNumber,
+}: Pick<StoreRecord, "id" | "name" | "address" | "longitude" | "latitude"> & {
+  integrationMode?: StoreIntegrationMode;
+  phoneNumber?: string;
+}) {
+  return {
+    id,
+    name,
+    address,
+    phoneNumber: phoneNumber ?? buildMockPhoneNumber(`${id}-${name}`),
+    longitude,
+    latitude,
+    integrationMode,
+    ...buildMockStoreMetrics(`${id}-${name}`),
+  } satisfies StoreRecord;
+}
+
+const BACKEND_TARGET_STORE = buildManualStoreRecord({
+  id: "backend-target-ryans-grocery-store-lebreton-flats",
+  name: "Ryans Grocery Store",
+  address: "LeBreton Flats, Ottawa, Ontario",
+  longitude: -75.7146,
+  latitude: 45.4176,
+  integrationMode: "backend-target",
+  phoneNumber: "",
+});
+
+const MANUAL_SAMPLE_STORES: StoreRecord[] = [];
 
 function toStoreRecord(feature: MapboxSearchFeature) {
   const properties = feature.properties;
@@ -172,8 +302,10 @@ function toStoreRecord(feature: MapboxSearchFeature) {
     id,
     name,
     address: address || "Ottawa, Ontario",
+    phoneNumber: buildMockPhoneNumber(`${id}-${name}`),
     longitude,
     latitude,
+    integrationMode: "frontend-sample",
     ...metrics,
   } satisfies StoreRecord;
 }
@@ -280,9 +412,53 @@ export default function Home() {
   const filteredStores = stores.filter((store) =>
     store.name.toLowerCase().includes(normalizedQuery),
   );
+  const redStores = stores.filter((store) => store.callFreshness === "stale");
+  const unqueuedRedStores = redStores.filter((store) => !queuedCalls[store.id]);
+  const allMockCallRecords = stores
+    .flatMap((store) => buildMockCallRecords(store))
+    .sort((left, right) => left.daysAgo - right.daysAgo);
+  const historyWindowStartDays = historyOffsetDays;
+  const historyWindowEndDays = historyOffsetDays + lookbackDays;
+  const visibleRecentCallRecords = allMockCallRecords
+    .filter(
+      (record) =>
+        record.daysAgo >= historyWindowStartDays &&
+        record.daysAgo <= historyWindowEndDays,
+    )
+    .slice(0, 24);
+  const answeredCallRecords = allMockCallRecords.filter(
+    (record) => record.durationSeconds > 0,
+  );
+  const totalMissedCalls = allMockCallRecords.filter(
+    (record) => record.outcome === "Missed",
+  ).length;
+  const totalCallsMade = allMockCallRecords.length;
+  const answeredCalls = answeredCallRecords.length;
+  const averageCallTimeLabel =
+    answeredCallRecords.length > 0
+      ? formatDuration(
+          Math.round(
+            answeredCallRecords.reduce(
+              (total, record) => total + record.durationSeconds,
+              0,
+            ) / answeredCallRecords.length,
+          ),
+        )
+      : "0m 00s";
+  const plannedFollowUpsCount =
+    stores.reduce((total, store) => total + store.pendingCallsCount, 0) +
+    Object.keys(queuedCalls).length;
+  const storesInHistoryWindow = new Set(
+    visibleRecentCallRecords.map((record) => record.storeId),
+  ).size;
+  const missedCallsInHistoryWindow = visibleRecentCallRecords.filter(
+    (record) => record.outcome === "Missed",
+  ).length;
   const displayedStores = filteredStores.slice(0, 14);
   const selectedStore =
     stores.find((store) => store.id === selectedStoreId) ?? null;
+  const selectedStoreIsBackendTarget =
+    selectedStore?.integrationMode === "backend-target";
   const activeTabMeta = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
   const queuedCallLabel = selectedStore ? queuedCalls[selectedStore.id] ?? null : null;
   const pendingCallsTotal =
@@ -403,13 +579,21 @@ export default function Home() {
           }
         }
 
+        const mergedStores = new Map([
+          ...uniqueStores.entries(),
+          ...fallbackStores.entries(),
+        ]);
+
+        mergedStores.set(BACKEND_TARGET_STORE.id, BACKEND_TARGET_STORE);
+
+        for (const store of MANUAL_SAMPLE_STORES) {
+          mergedStores.set(store.id, store);
+        }
+
         setStores(
-          Array.from(
-            new Map([
-              ...uniqueStores.entries(),
-              ...fallbackStores.entries(),
-            ]).values(),
-          ).sort((left, right) => left.name.localeCompare(right.name)),
+          Array.from(mergedStores.values()).sort((left, right) =>
+            left.name.localeCompare(right.name),
+          ),
         );
         if (failedQueryCount > 0) {
           console.warn(`Mapbox category search failed for ${failedQueryCount} Ottawa queries.`);
@@ -453,6 +637,30 @@ export default function Home() {
       [selectedStore.id]: formattedTime,
     }));
     setActiveTab("planned");
+  }
+
+  function queueCallsForRedStores() {
+    if (unqueuedRedStores.length === 0) {
+      return;
+    }
+
+    setQueuedCalls((current) => {
+      const nextQueuedCalls = { ...current };
+
+      unqueuedRedStores.forEach((store, index) => {
+        const scheduledTime = new Date(
+          Date.now() + (30 + index * 15) * 60 * 1000,
+        );
+        const formattedTime = new Intl.DateTimeFormat("en-CA", {
+          dateStyle: "medium",
+          timeStyle: "short",
+        }).format(scheduledTime);
+
+        nextQueuedCalls[store.id] = formattedTime;
+      });
+
+      return nextQueuedCalls;
+    });
   }
 
   function openStoreWindow(store: StoreRecord, tab: DashboardTab = "logs") {
@@ -560,13 +768,23 @@ export default function Home() {
                               <span className="block text-sm font-medium text-[color:var(--foreground)]">
                                 {store.name}
                               </span>
-                              <span className="mt-1 block truncate text-xs text-[color:var(--muted-strong)]">
-                                {store.address}
+                              {store.integrationMode === "backend-target" ? (
+                                <span className="mt-1 inline-flex rounded-full border border-[color:var(--border-strong)] bg-[#fff3df] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--foreground)]">
+                                  Backend target
+                                </span>
+                              ) : null}
+                            <span className="mt-1 block truncate text-xs text-[color:var(--muted-strong)]">
+                              {store.address}
+                            </span>
+                            {store.phoneNumber ? (
+                              <span className="mt-1 block text-xs text-[color:var(--muted)]">
+                                {store.phoneNumber}
                               </span>
-                            </span>
-                            <span className="mt-0.5 shrink-0 text-xs uppercase tracking-[0.16em] text-[color:var(--muted)]">
-                              Select
-                            </span>
+                            ) : null}
+                          </span>
+                          <span className="mt-0.5 shrink-0 text-xs uppercase tracking-[0.16em] text-[color:var(--muted)]">
+                            Select
+                          </span>
                           </button>
                         ))
                       ) : (
@@ -611,6 +829,27 @@ export default function Home() {
               </div>
             </div>
 
+            <button
+              type="button"
+              onClick={queueCallsForRedStores}
+              disabled={unqueuedRedStores.length === 0}
+              className="rounded-[28px] border border-[color:var(--border-strong)] bg-[color:var(--surface)] p-5 text-left shadow-[0_24px_80px_-46px_rgba(20,20,20,0.16)] transition hover:bg-[#fff3df] disabled:cursor-not-allowed disabled:border-[color:var(--border)] disabled:bg-[color:var(--surface-soft)] disabled:opacity-70 sm:p-6"
+            >
+              <span className="block text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
+                Priority follow-up
+              </span>
+              <span className="mt-2 block text-lg font-semibold text-[color:var(--foreground)]">
+                Queue follow-up calls
+              </span>
+              <span className="mt-2 block text-sm leading-6 text-[color:var(--muted-strong)]">
+                {unqueuedRedStores.length > 0
+                  ? `${unqueuedRedStores.length} priority locations will be added to the follow-up queue.`
+                  : redStores.length > 0
+                    ? "All priority locations are already queued."
+                    : "No priority locations are currently available for follow-up."}
+              </span>
+            </button>
+
           </div>
 
           <section className="min-h-0 rounded-[32px] border border-[color:var(--border)] bg-[color:var(--surface)] p-5 shadow-[0_24px_80px_-46px_rgba(20,20,20,0.16)] backdrop-blur sm:p-6">
@@ -648,11 +887,18 @@ export default function Home() {
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
                   Store details
                 </p>
+                {selectedStoreIsBackendTarget ? (
+                  <div className="mt-3 inline-flex rounded-full border border-[color:var(--border-strong)] bg-[#fff3df] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[color:var(--foreground)]">
+                    Backend integration target
+                  </div>
+                ) : null}
                 <h2 className="mt-2 break-words text-2xl font-semibold text-[color:var(--foreground)] sm:text-3xl">
                   {selectedStore ? selectedStore.name : "Selected store"}
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-[color:var(--muted-strong)]">
-                  Review this store&apos;s call history, transcripts, map location, missed calls, average duration, and pending call timing.
+                  {selectedStoreIsBackendTarget
+                    ? "This is the only store designated for backend integration. Review its call history, transcripts, map location, missed calls, and pending call timing here."
+                    : "This store remains a frontend sample location. Review its call history, transcripts, map location, missed calls, and pending call timing here."}
                 </p>
               </div>
               <button
@@ -704,12 +950,32 @@ export default function Home() {
                   <p className="mt-3 text-sm leading-6 text-[color:var(--muted-strong)]">
                     {selectedStore?.address ?? "Not available yet"}
                   </p>
+                  {selectedStore?.phoneNumber ? (
+                    <div className="mt-4 rounded-[20px] border border-[color:var(--border)] bg-[color:var(--surface-strong)] px-4 py-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
+                        Phone number
+                      </p>
+                      <p className="mt-2 text-sm text-[color:var(--muted-strong)]">
+                        {selectedStore.phoneNumber}
+                      </p>
+                    </div>
+                  ) : null}
                   <div className="mt-4 rounded-[20px] border border-[color:var(--border)] bg-[color:var(--surface-strong)] px-4 py-3">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
                       Last called
                     </p>
                     <p className="mt-2 text-sm text-[color:var(--muted-strong)]">
                       {selectedStore?.lastCalledLabel ?? "Not available yet"}
+                    </p>
+                  </div>
+                  <div className="mt-4 rounded-[20px] border border-[color:var(--border)] bg-[color:var(--surface-strong)] px-4 py-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
+                      Integration status
+                    </p>
+                    <p className="mt-2 text-sm text-[color:var(--muted-strong)]">
+                      {selectedStoreIsBackendTarget
+                        ? "Connected as the dedicated backend integration target."
+                        : "Frontend-only sample store."}
                     </p>
                   </div>
                   <button
@@ -721,7 +987,7 @@ export default function Home() {
                   </button>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
+                <div className="grid gap-4">
                   <div className="rounded-[26px] border border-[color:var(--border)] bg-[color:var(--surface-soft)] p-5">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
                       Missed calls
@@ -731,18 +997,6 @@ export default function Home() {
                     </p>
                     <p className="mt-3 text-sm leading-6 text-[color:var(--muted-strong)]">
                       Total missed calls for this location.
-                    </p>
-                  </div>
-
-                  <div className="rounded-[26px] border border-[color:var(--border)] bg-[color:var(--surface-soft)] p-5">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
-                      Average call duration
-                    </p>
-                    <p className="mt-3 text-3xl font-semibold text-[color:var(--foreground)]">
-                      {selectedStore?.averageCallDurationLabel ?? "--"}
-                    </p>
-                    <p className="mt-3 text-sm leading-6 text-[color:var(--muted-strong)]">
-                      Average duration for completed calls to this store.
                     </p>
                   </div>
                 </div>
@@ -841,7 +1095,7 @@ export default function Home() {
                   Recent call history
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-[color:var(--muted-strong)]">
-                  This view will show every recent call across all stores once live data is connected.
+                  Frontend sample calls across all stores. Transcript contents still stay empty for now.
                 </p>
               </div>
               <button
@@ -899,14 +1153,127 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="mt-5 flex min-h-0 flex-1 items-center justify-center rounded-[28px] border border-dashed border-[color:var(--border)] bg-[color:var(--surface-soft)] px-6 text-center">
-              <div className="max-w-xl">
-                <p className="text-lg font-semibold text-[color:var(--foreground)]">
-                  No recent call records yet
-                </p>
-                <p className="mt-3 text-sm leading-7 text-[color:var(--muted-strong)]">
-                  When call history is connected, this panel will show every recent call across all stores using the selected time sliders.
-                </p>
+            <div className="mt-5 grid min-h-0 flex-1 gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
+              <div className="grid content-start gap-4">
+                <div className="rounded-[26px] border border-[color:var(--border)] bg-[color:var(--surface-soft)] p-5">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
+                    Calls in range
+                  </p>
+                  <p className="mt-3 text-3xl font-semibold text-[color:var(--foreground)]">
+                    {visibleRecentCallRecords.length}
+                  </p>
+                  <p className="mt-3 text-sm leading-6 text-[color:var(--muted-strong)]">
+                    Calls shown for the current slider window.
+                  </p>
+                </div>
+
+                <div className="rounded-[26px] border border-[color:var(--border)] bg-[color:var(--surface-soft)] p-5">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
+                    Stores in range
+                  </p>
+                  <p className="mt-3 text-3xl font-semibold text-[color:var(--foreground)]">
+                    {storesInHistoryWindow}
+                  </p>
+                  <p className="mt-3 text-sm leading-6 text-[color:var(--muted-strong)]">
+                    Unique stores represented in this time window.
+                  </p>
+                </div>
+
+                <div className="rounded-[26px] border border-[color:var(--border)] bg-[color:var(--surface-soft)] p-5">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
+                    Missed in range
+                  </p>
+                  <p className="mt-3 text-3xl font-semibold text-[color:var(--foreground)]">
+                    {missedCallsInHistoryWindow}
+                  </p>
+                  <p className="mt-3 text-sm leading-6 text-[color:var(--muted-strong)]">
+                    Calls that were not answered in this view.
+                  </p>
+                </div>
+              </div>
+
+              <div className="min-h-0 rounded-[28px] border border-[color:var(--border)] bg-[color:var(--surface-soft)] p-4 sm:p-5">
+                <div className="flex items-center justify-between gap-4 border-b border-[color:var(--border)] pb-3">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
+                      Recent calls
+                    </p>
+                    <p className="mt-1 text-sm text-[color:var(--muted-strong)]">
+                      Showing the latest calls inside the selected window.
+                    </p>
+                  </div>
+                  <div className="rounded-full border border-[color:var(--border)] bg-[color:var(--surface-strong)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
+                    0 transcripts
+                  </div>
+                </div>
+
+                <div className="mt-4 max-h-[420px] space-y-3 overflow-y-auto pr-1">
+                  {visibleRecentCallRecords.length > 0 ? (
+                    visibleRecentCallRecords.map((record) => (
+                      <div
+                        key={record.id}
+                        className="rounded-[22px] border border-[color:var(--border)] bg-[color:var(--surface-strong)] p-4"
+                      >
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="min-w-0">
+                            <p className="text-base font-semibold text-[color:var(--foreground)]">
+                              {record.storeName}
+                            </p>
+                            <p className="mt-1 text-sm text-[color:var(--muted-strong)]">
+                              {record.storeAddress}
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <span className="rounded-full border border-[color:var(--border)] bg-[color:var(--surface-soft)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--muted)]">
+                              {record.outcome}
+                            </span>
+                            <span className="rounded-full border border-[color:var(--border)] bg-[color:var(--surface-soft)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--muted)]">
+                              Transcript empty
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                          <div className="rounded-[18px] border border-[color:var(--border)] bg-[color:var(--surface-soft)] px-3 py-3">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[color:var(--muted)]">
+                              Call time
+                            </p>
+                            <p className="mt-2 text-sm text-[color:var(--muted-strong)]">
+                              {record.occurredAtLabel}
+                            </p>
+                          </div>
+                          <div className="rounded-[18px] border border-[color:var(--border)] bg-[color:var(--surface-soft)] px-3 py-3">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[color:var(--muted)]">
+                              Relative age
+                            </p>
+                            <p className="mt-2 text-sm text-[color:var(--muted-strong)]">
+                              {record.relativeAgeLabel}
+                            </p>
+                          </div>
+                          <div className="rounded-[18px] border border-[color:var(--border)] bg-[color:var(--surface-soft)] px-3 py-3">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[color:var(--muted)]">
+                              Duration
+                            </p>
+                            <p className="mt-2 text-sm text-[color:var(--muted-strong)]">
+                              {record.durationLabel}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="flex h-full min-h-[220px] items-center justify-center rounded-[22px] border border-dashed border-[color:var(--border)] bg-[color:var(--surface-strong)] px-6 text-center">
+                      <div className="max-w-lg">
+                        <p className="text-lg font-semibold text-[color:var(--foreground)]">
+                          No calls in this time window
+                        </p>
+                        <p className="mt-3 text-sm leading-7 text-[color:var(--muted-strong)]">
+                          Try widening the look-back window or reducing the timeline offset to reveal more sample calls.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -925,7 +1292,7 @@ export default function Home() {
                   Outreach statistics
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-[color:var(--muted-strong)]">
-                  This window will show live outreach stats once backend data is connected.
+                  Frontend sample totals based on the current mock call activity across Ottawa stores.
                 </p>
               </div>
               <button
@@ -943,7 +1310,7 @@ export default function Home() {
                   Calls made
                 </p>
                 <p className="mt-3 text-3xl font-semibold text-[color:var(--foreground)]">
-                  --
+                  {totalCallsMade}
                 </p>
                 <p className="mt-3 text-sm leading-6 text-[color:var(--muted-strong)]">
                   Total completed and attempted calls across the dashboard.
@@ -955,7 +1322,7 @@ export default function Home() {
                   Stores outreached
                 </p>
                 <p className="mt-3 text-3xl font-semibold text-[color:var(--foreground)]">
-                  --
+                  {stores.length}
                 </p>
                 <p className="mt-3 text-sm leading-6 text-[color:var(--muted-strong)]">
                   Unique stores touched by outreach activity.
@@ -967,7 +1334,7 @@ export default function Home() {
                   Average call time
                 </p>
                 <p className="mt-3 text-3xl font-semibold text-[color:var(--foreground)]">
-                  --
+                  {averageCallTimeLabel}
                 </p>
                 <p className="mt-3 text-sm leading-6 text-[color:var(--muted-strong)]">
                   Average duration across connected call records.
@@ -979,7 +1346,7 @@ export default function Home() {
                   Answered calls
                 </p>
                 <p className="mt-3 text-3xl font-semibold text-[color:var(--foreground)]">
-                  --
+                  {answeredCalls}
                 </p>
                 <p className="mt-3 text-sm leading-6 text-[color:var(--muted-strong)]">
                   Calls that connected successfully.
@@ -991,7 +1358,7 @@ export default function Home() {
                   Transcripts available
                 </p>
                 <p className="mt-3 text-3xl font-semibold text-[color:var(--foreground)]">
-                  --
+                  0
                 </p>
                 <p className="mt-3 text-sm leading-6 text-[color:var(--muted-strong)]">
                   Calls with transcript records attached.
@@ -1003,7 +1370,7 @@ export default function Home() {
                   Planned follow-ups
                 </p>
                 <p className="mt-3 text-3xl font-semibold text-[color:var(--foreground)]">
-                  --
+                  {plannedFollowUpsCount}
                 </p>
                 <p className="mt-3 text-sm leading-6 text-[color:var(--muted-strong)]">
                   Next-step items created from call outcomes.
@@ -1011,14 +1378,47 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="mt-5 flex min-h-0 flex-1 items-center justify-center rounded-[28px] border border-dashed border-[color:var(--border)] bg-[color:var(--surface-soft)] px-6 text-center">
-              <div className="max-w-xl">
-                <p className="text-lg font-semibold text-[color:var(--foreground)]">
-                  Stats are waiting for live data
-                </p>
-                <p className="mt-3 text-sm leading-7 text-[color:var(--muted-strong)]">
-                  Once calls, stores, and transcripts are connected, this panel can summarize key outreach performance at a glance.
-                </p>
+            <div className="mt-5 rounded-[28px] border border-[color:var(--border)] bg-[color:var(--surface-soft)] p-5">
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="rounded-[22px] border border-[color:var(--border)] bg-[color:var(--surface-strong)] p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
+                    Recent window
+                  </p>
+                  <p className="mt-2 text-lg font-semibold text-[color:var(--foreground)]">
+                    {visibleRecentCallRecords.length} calls shown
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-[color:var(--muted-strong)]">
+                    Matches the current recent-history slider range.
+                  </p>
+                </div>
+
+                <div className="rounded-[22px] border border-[color:var(--border)] bg-[color:var(--surface-strong)] p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
+                    Missed call share
+                  </p>
+                  <p className="mt-2 text-lg font-semibold text-[color:var(--foreground)]">
+                    {totalCallsMade > 0
+                      ? `${Math.round(
+                          (totalMissedCalls / totalCallsMade) * 100,
+                        )}%`
+                      : "0%"}
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-[color:var(--muted-strong)]">
+                    Percentage of sample calls that were not answered.
+                  </p>
+                </div>
+
+                <div className="rounded-[22px] border border-[color:var(--border)] bg-[color:var(--surface-strong)] p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
+                    Transcript status
+                  </p>
+                  <p className="mt-2 text-lg font-semibold text-[color:var(--foreground)]">
+                    Intentionally empty
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-[color:var(--muted-strong)]">
+                    Sample call totals are populated, but transcript contents remain blank.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
