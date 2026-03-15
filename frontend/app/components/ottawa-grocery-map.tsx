@@ -1,5 +1,6 @@
 "use client";
 
+import "mapbox-gl/dist/mapbox-gl.css";
 import { useEffect, useEffectEvent, useRef } from "react";
 import type { StoreRecord } from "../dashboard-types";
 
@@ -166,7 +167,8 @@ export function OttawaGroceryMap({
   });
 
   useEffect(() => {
-    if (!accessToken || !containerRef.current || mapRef.current) {
+    const token = typeof accessToken === "string" ? accessToken.trim() : "";
+    if (!token || !containerRef.current || mapRef.current) {
       return;
     }
 
@@ -179,7 +181,7 @@ export function OttawaGroceryMap({
         return;
       }
 
-      mapboxgl.accessToken = accessToken;
+      mapboxgl.accessToken = token;
 
       const map = new mapboxgl.Map({
         container: containerRef.current,
@@ -362,7 +364,13 @@ export function OttawaGroceryMap({
       mapRef.current?.remove();
       mapRef.current = null;
     };
-  }, [accessToken, defaultBearing, defaultPitch, initialZoom, isFullscreen]);
+  }, [
+    typeof accessToken === "string" ? accessToken.trim() : "",
+    defaultBearing,
+    defaultPitch,
+    initialZoom,
+    isFullscreen,
+  ]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -391,7 +399,8 @@ export function OttawaGroceryMap({
     });
   }, [defaultBearing, defaultPitch, isFullscreen, selectedStoreId, stores]);
 
-  if (!accessToken) {
+  const token = typeof accessToken === "string" ? accessToken.trim() : "";
+  if (!token) {
     return (
       <div
         className={`${className} flex items-center justify-center rounded-[30px] border border-dashed border-[color:var(--border)] bg-[color:var(--surface-soft)] px-6 text-center`}
@@ -412,7 +421,11 @@ export function OttawaGroceryMap({
 
   return (
     <div className={`${className} relative overflow-hidden`}>
-      <div ref={containerRef} className="h-full w-full" />
+      <div
+        ref={containerRef}
+        className="h-full min-h-[280px] w-full"
+        aria-hidden
+      />
 
       {loading ? (
         <div className="pointer-events-none absolute inset-x-4 top-4 rounded-full border border-[color:var(--border)] bg-[rgba(255,255,255,0.92)] px-4 py-2 text-sm text-[color:var(--muted-strong)] shadow-[0_18px_45px_-32px_rgba(20,20,20,0.14)]">

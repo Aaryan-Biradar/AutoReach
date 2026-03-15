@@ -9,7 +9,10 @@ import type {
   StoreRecord,
 } from "../dashboard-types";
 
-const MAPBOX_ACCESS_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
+const MAPBOX_ACCESS_TOKEN =
+  typeof process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN === "string"
+    ? process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN.trim()
+    : undefined;
 const OTTAWA_GROCERY_SEARCH_URL = "https://api.mapbox.com/search/searchbox/v1/category";
 const OTTAWA_BBOX = [-76.353915, 45.197522, -75.246597, 45.53758] as const;
 const OTTAWA_PROXIMITY = "-75.6972,45.4215";
