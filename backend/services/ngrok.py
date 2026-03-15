@@ -8,6 +8,7 @@ import httpx
 logger = logging.getLogger(__name__)
 
 NGROK_HOSTS = [
+    "http://ngrok:4040",  # Docker Compose: ngrok service
     "http://localhost:4040",
     "http://host.docker.internal:4040",
 ]

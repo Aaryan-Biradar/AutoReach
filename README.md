@@ -65,10 +65,10 @@ cd AutoReach
 
 ### 2. Set up your environment variables
 
-The project needs API keys and database credentials to run. Create a `.env` file at the **root** of the project (next to `docker-compose.yml`):
+The project needs API keys and database credentials to run. Copy the example env file and edit it, or create a `.env` file at the **root** of the project (next to `docker-compose.yml`):
 
 ```bash
-touch .env
+cp .env.example .env
 ```
 
 Then open it and add the following. Ask a teammate for the actual values if you don't have them yet:
@@ -76,12 +76,19 @@ Then open it and add the following. Ask a teammate for the actual values if you 
 ```env
 # Database — this connects your backend to the PostgreSQL container
 DATABASE_URL=postgresql://postgres:password@db:5432/autoreach
- 
+
 # Vapi — the voice calling service
-VAPI_API_KEY=your_vapi_key_here
- 
-# OpenAI — used for embeddings and LangChain
+VAPI_PRIVATE_KEY=your_vapi_private_key_here
+ASSISTANT_ID=your_assistant_id_here
+PHONE_NUMBER_ID=your_phone_number_id_here
+CUSTOMER_PHONE_NUMBER=+1XXXXXXXXXX
+
+# OpenAI — used for embeddings and the Railtracks agent
 OPENAI_API_KEY=your_openai_key_here
+
+# Ngrok — required when running the full stack with Docker (see "Run with Docker + ngrok" below)
+# Get your token at https://dashboard.ngrok.com/get-started/your-authtoken
+NGROK_AUTHTOKEN=your_ngrok_authtoken_here
 ```
 
 ### 3. Start the database with Docker
@@ -142,15 +149,39 @@ The frontend will be running at [http://localhost:3000](http://localhost:3000).
 
 ## Running Everything at Once (Docker)
 
-If you want to run the entire stack — database, backend, and frontend — all together with a single command, you can use Docker Compose. Make sure Docker Desktop is running, then from the project root:
+If you want to run the entire stack — database, backend, frontend, and **ngrok** — with a single command, use Docker Compose.
+
+### Run with Docker + ngrok (recommended for voice calls)
+
+Voice calls need a public URL so Vapi can reach the backend for `/chat/completions` and webhooks. The Compose stack includes an **ngrok** service that tunnels to the backend.
+
+1. **Set `NGROK_AUTHTOKEN` in `.env`**  
+   Sign up at [ngrok.com](https://ngrok.com) (free tier is enough), then copy your authtoken from [dashboard.ngrok.com/get-started/your-authtoken](https://dashboard.ngrok.com/get-started/your-authtoken) and add to `.env`:
+   ```env
+   NGROK_AUTHTOKEN=your_ngrok_authtoken_here
+   ```
+2. From the project root, run:
+   ```bash
+   docker compose up --build
+   ```
+3. Wait a few seconds for ngrok to establish the tunnel. The backend will read the public URL from the ngrok container’s API when you start a call.
+4. Open the app at [http://localhost:3000](http://localhost:3000) and use “Start call” as usual. The ngrok inspector is at [http://localhost:4040](http://localhost:4040) for debugging.
+
+If `NGROK_AUTHTOKEN` is missing, the ngrok container will exit with an error; add the token and run `docker compose up` again.
+
+### Run without ngrok (DB + backend + frontend only)
+
+To run only the database, backend, and frontend (no tunnel):
 
 ```bash
-docker compose up
+docker compose up db backend frontend
 ```
 
-This builds and starts all three services. The first time you run this it may take a minute or two to build the images. After that it's much faster.
+You won’t be able to place voice calls unless you run ngrok separately on the host and set `NGROK_URL` in `.env` to your tunnel URL.
 
-To stop everything, press `Ctrl+C` or run:
+### Stop everything
+
+Press `Ctrl+C` or run:
 
 ```bash
 docker compose down
