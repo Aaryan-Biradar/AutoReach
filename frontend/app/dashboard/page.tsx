@@ -1,6 +1,7 @@
 "use client";
 
 import { useDeferredValue, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { OttawaGroceryMap } from "../components/ottawa-grocery-map";
 import type {
   CallFreshness,
@@ -9,6 +10,7 @@ import type {
   StoreRecord,
 } from "../dashboard-types";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const MAPBOX_ACCESS_TOKEN =
   typeof process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN === "string"
     ? process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN.trim()
@@ -363,6 +365,8 @@ export default function Home() {
   const [queuedCalls, setQueuedCalls] = useState<Record<string, string>>({});
   const [lookbackDays, setLookbackDays] = useState(30);
   const [historyOffsetDays, setHistoryOffsetDays] = useState(0);
+  const [isQueueingCall, setIsQueueingCall] = useState(false);
+  const router = useRouter();
 
   const deferredQuery = useDeferredValue(query);
   const normalizedQuery = deferredQuery.trim().toLowerCase();
@@ -608,22 +612,39 @@ export default function Home() {
     return () => controller.abort();
   }, []);
 
-  function queueCallForSelectedStore() {
-    if (!selectedStore) {
+  async function queueCallForSelectedStore() {
+    if (!selectedStore || isQueueingCall) {
       return;
     }
-
-    const scheduledTime = new Date(Date.now() + 30 * 60 * 1000);
-    const formattedTime = new Intl.DateTimeFormat("en-CA", {
-      dateStyle: "medium",
-      timeStyle: "short",
-    }).format(scheduledTime);
-
-    setQueuedCalls((current) => ({
-      ...current,
-      [selectedStore.id]: formattedTime,
-    }));
-    setActiveTab("planned");
+    setIsQueueingCall(true);
+    try {
+      const res = await fetch(`${API_URL}/api/calls/start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) {
+        const err = await res.text();
+        console.error("[queue call]", err);
+        setIsQueueingCall(false);
+        return;
+      }
+      const data = (await res.json()) as { call_id: string; status?: string };
+      const scheduledTime = new Date(Date.now() + 30 * 60 * 1000);
+      const formattedTime = new Intl.DateTimeFormat("en-CA", {
+        dateStyle: "medium",
+        timeStyle: "short",
+      }).format(scheduledTime);
+      setQueuedCalls((current) => ({
+        ...current,
+        [selectedStore.id]: formattedTime,
+      }));
+      setActiveTab("planned");
+      router.push(`/call?call_id=${encodeURIComponent(data.call_id)}`);
+    } catch (err) {
+      console.error("[queue call]", err);
+      setIsQueueingCall(false);
+    }
   }
 
   function queueCallsForRedStores() {
@@ -991,10 +1012,11 @@ export default function Home() {
                   </p>
                   <button
                     type="button"
-                    onClick={queueCallForSelectedStore}
-                    className="mt-4 rounded-full border border-[color:var(--border-strong)] bg-[color:var(--accent)] px-4 py-2 text-sm font-medium text-[color:var(--foreground)] transition hover:bg-[color:var(--accent-strong)]"
+                    onClick={() => void queueCallForSelectedStore()}
+                    disabled={isQueueingCall}
+                    className="mt-4 rounded-full border border-[color:var(--border-strong)] bg-[color:var(--accent)] px-4 py-2 text-sm font-medium text-[color:var(--foreground)] transition hover:bg-[color:var(--accent-strong)] disabled:opacity-60 disabled:pointer-events-none"
                   >
-                    Queue A Call
+                    {isQueueingCall ? "Starting call…" : "Queue A Call"}
                   </button>
                   <div className="mt-4 grid gap-3">
                     <div className="rounded-[20px] border border-[color:var(--border)] bg-[color:var(--surface-strong)] px-4 py-3">

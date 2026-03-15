@@ -1,6 +1,8 @@
 "use client";
 
 import { useRef, useEffect, useCallback, useState } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 // ── Config ───────────────────────────────────────────────────────────────
 
@@ -15,7 +17,7 @@ interface TranscriptMessage {
 
 type CallStatus = "idle" | "starting" | "queued" | "ringing" | "in-progress" | "ended";
 
-// ── AI Orb (canvas) ─────────────────────────────────────────────────────
+// ── AI Orb (landing-style cream orb) ─────────────────────────────────────
 
 const ORB_SIZE = 280;
 const RADIUS = 110;
@@ -51,35 +53,38 @@ function AIOrb({ active }: { active: boolean }) {
 
       ctx.clearRect(0, 0, size, size);
 
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(cx, cy, RADIUS, 0, Math.PI * 2);
-      ctx.closePath();
-      ctx.clip();
+      const orbPath = new Path2D();
+      orbPath.arc(cx, cy, RADIUS, 0, Math.PI * 2);
 
-      ctx.fillStyle = "#0e0b1a";
+      ctx.save();
+      ctx.clip(orbPath);
+
+      // Base fill: slightly darker cream inside orb (landing style)
+      ctx.fillStyle = "#e2dcc8";
       ctx.fillRect(0, 0, size, size);
 
-      const speedMul = isActive ? 1.6 : 1;
+      // Moving orbs: cream-matching colours (landing style)
+      const speedMul = isActive ? 1.2 : 1;
       const blobs = [
-        { color: [147, 51, 234], rx: 0.7, ry: 0.9, spX: 0.4, spY: 0.3, phX: 0, phY: 2, r: 70 },
-        { color: [59, 130, 246], rx: 0.8, ry: 0.6, spX: 0.3, spY: 0.5, phX: 1.5, phY: 0.8, r: 65 },
-        { color: [192, 132, 252], rx: 0.5, ry: 0.7, spX: 0.5, spY: 0.25, phX: 3, phY: 4, r: 55 },
-        { color: [99, 102, 241], rx: 0.6, ry: 0.5, spX: 0.35, spY: 0.45, phX: 5, phY: 1, r: 50 },
+        { color: [165, 148, 118], rx: 0.7, ry: 0.9, spX: 0.4, spY: 0.3, phX: 0, phY: 2, r: 78 },
+        { color: [152, 135, 108], rx: 0.8, ry: 0.6, spX: 0.3, spY: 0.5, phX: 1.5, phY: 0.8, r: 72 },
+        { color: [142, 125, 98], rx: 0.5, ry: 0.7, spX: 0.5, spY: 0.25, phX: 3, phY: 4, r: 62 },
+        { color: [158, 142, 112], rx: 0.6, ry: 0.5, spX: 0.35, spY: 0.45, phX: 5, phY: 1, r: 58 },
       ];
-
       for (const b of blobs) {
         const bx = cx + Math.sin(t * b.spX * speedMul + b.phX) * RADIUS * b.rx * 0.5;
         const by = cy + Math.cos(t * b.spY * speedMul + b.phY) * RADIUS * b.ry * 0.5;
         const grad = ctx.createRadialGradient(bx, by, 0, bx, by, b.r);
-        grad.addColorStop(0, `rgba(${b.color[0]},${b.color[1]},${b.color[2]},0.8)`);
-        grad.addColorStop(0.6, `rgba(${b.color[0]},${b.color[1]},${b.color[2]},0.2)`);
+        grad.addColorStop(0, `rgba(${b.color[0]},${b.color[1]},${b.color[2]},0.95)`);
+        grad.addColorStop(0.35, `rgba(${b.color[0]},${b.color[1]},${b.color[2]},0.6)`);
+        grad.addColorStop(0.65, `rgba(${b.color[0]},${b.color[1]},${b.color[2]},0.2)`);
         grad.addColorStop(1, `rgba(${b.color[0]},${b.color[1]},${b.color[2]},0)`);
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, size, size);
       }
 
-      ctx.globalAlpha = 0.5;
+      // Sweeping arcs (cream tint, landing style)
+      ctx.globalAlpha = 0.45;
       for (let i = 0; i < 5; i++) {
         const aOff = (i / 5) * Math.PI * 2;
         const sweep = 0.8 + Math.sin(t * 0.6 + i) * 0.4;
@@ -87,30 +92,35 @@ function AIOrb({ active }: { active: boolean }) {
         const pr = RADIUS * (0.45 + i * 0.08);
         ctx.beginPath();
         ctx.arc(cx, cy, pr, startA, startA + sweep);
-        ctx.strokeStyle = `rgba(200,180,255,${0.25 + Math.sin(t + i) * 0.15})`;
+        ctx.strokeStyle = `rgba(210,200,180,${0.25 + Math.sin(t + i) * 0.12})`;
         ctx.lineWidth = 1.5;
         ctx.stroke();
       }
       ctx.globalAlpha = 1;
 
+      // Sparkles (cream/off-white, landing style)
       for (let i = 0; i < 20; i++) {
         const a = t * (0.15 + i * 0.03) + i * 1.25;
         const dr = RADIUS * (0.25 + (i % 7) * 0.09);
         const sx = cx + Math.cos(a) * dr;
         const sy = cy + Math.sin(a) * dr;
-        const sparkleAlpha = 0.3 + Math.sin(t * 2 + i * 0.8) * 0.3;
+        const sparkleAlpha = 0.25 + Math.sin(t * 2 + i * 0.8) * 0.25;
         ctx.beginPath();
         ctx.arc(sx, sy, 1.2, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255,255,255,${sparkleAlpha})`;
+        ctx.fillStyle = `rgba(245,238,220,${sparkleAlpha})`;
         ctx.fill();
       }
 
+      // Wave bars (voice ring, landing teal/slate gradient)
       const waveBars = 80;
       const waveInner = RADIUS - 18;
-      const waveMax = isActive ? 18 : 14;
-      const envelope = isActive
-        ? 0.6 + Math.sin(t * 1.6) * 0.2 + Math.sin(t * 2.9) * 0.15 + Math.abs(Math.sin(t * 0.7)) * 0.1
-        : 0.55 + Math.sin(t * 1.6) * 0.2 + Math.sin(t * 2.9) * 0.15 + Math.abs(Math.sin(t * 0.7)) * 0.1;
+      const waveMax = isActive ? 18 : 15;
+      const envelope =
+        0.55 +
+        Math.sin(t * 1.6) * 0.2 +
+        Math.sin(t * 2.9) * 0.15 +
+        Math.abs(Math.sin(t * 0.7)) * 0.1 +
+        (isActive ? 0.08 : 0);
 
       for (let i = 0; i < waveBars; i++) {
         const angle = (i / waveBars) * Math.PI * 2 - Math.PI / 2;
@@ -118,40 +128,43 @@ function AIOrb({ active }: { active: boolean }) {
           Math.sin(t * 8 + i * 0.9) * 0.3 +
           Math.sin(t * 12.5 + i * 1.7) * 0.3 +
           Math.sin(t * 5.3 + i * 2.4) * 0.4;
-        const barH = Math.max(2, ((noise + 1) / 2) * waveMax * envelope);
+        const barH = Math.max(3, ((noise + 1) / 2) * waveMax * envelope);
         const x1 = cx + Math.cos(angle) * waveInner;
         const y1 = cy + Math.sin(angle) * waveInner;
         const x2 = cx + Math.cos(angle) * (waveInner - barH);
         const y2 = cy + Math.sin(angle) * (waveInner - barH);
-        const barAlpha = 0.4 + envelope * 0.5;
+        const normAngle = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+        const tc = (Math.sin(normAngle - Math.PI * 0.15) + 1) / 2;
+        const tc2 = Math.pow(tc, 1.5);
+        const r = Math.round(185 * tc2 + 155 * (1 - tc2));
+        const g = Math.round(168 * tc2 + 138 * (1 - tc2));
+        const bl = Math.round(142 * tc2 + 115 * (1 - tc2));
+        const barAlpha = 0.75 + envelope * 0.22;
         ctx.beginPath();
         ctx.moveTo(x1, y1);
         ctx.lineTo(x2, y2);
-        ctx.strokeStyle = `rgba(192,132,252,${barAlpha})`;
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = `rgba(${r},${g},${bl},${barAlpha})`;
+        ctx.lineWidth = 2.5;
         ctx.lineCap = "round";
         ctx.stroke();
       }
 
       ctx.restore();
 
-      ctx.beginPath();
-      ctx.arc(cx, cy, RADIUS, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(147,51,234,0.3)";
-      ctx.lineWidth = 2;
-      ctx.shadowColor = "#9333ea";
+      // Orb outline and highlight (landing style)
+      ctx.strokeStyle = "rgba(200,190,170,0.5)";
+      ctx.lineWidth = 2.5;
+      ctx.shadowColor = "#c4b89a";
       ctx.shadowBlur = 20;
-      ctx.stroke();
+      ctx.stroke(orbPath);
       ctx.shadowColor = "transparent";
       ctx.shadowBlur = 0;
 
-      const hlGrad = ctx.createRadialGradient(cx - 30, cy - 35, 2, cx - 20, cy - 25, 45);
-      hlGrad.addColorStop(0, "rgba(255,255,255,0.12)");
+      const hlGrad = ctx.createRadialGradient(cx - 22, cy - 25, 2, cx - 15, cy - 18, 38);
+      hlGrad.addColorStop(0, "rgba(248,242,228,0.14)");
       hlGrad.addColorStop(1, "rgba(255,255,255,0)");
       ctx.fillStyle = hlGrad;
-      ctx.beginPath();
-      ctx.arc(cx, cy, RADIUS, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.fill(orbPath);
 
       frameRef.current = requestAnimationFrame(draw);
     }
@@ -256,12 +269,14 @@ function StatusBadge({ status }: { status: CallStatus }) {
 // ── Page ─────────────────────────────────────────────────────────────────
 
 export default function CallPage() {
+  const searchParams = useSearchParams();
   const [status, setStatus] = useState<CallStatus>("idle");
   const [callId, setCallId] = useState<string | null>(null);
   const [messages, setMessages] = useState<TranscriptMessage[]>([]);
   const [partial, setPartial] = useState<TranscriptMessage | null>(null);
   const esRef = useRef<EventSource | null>(null);
   const streamErrorCountRef = useRef(0);
+  const hasAppliedCallIdRef = useRef(false);
 
   const closeStream = useCallback(() => {
     if (esRef.current) {
@@ -329,6 +344,16 @@ export default function CallPage() {
     return () => closeStream();
   }, [closeStream]);
 
+  // When navigated from dashboard with ?call_id=..., attach to that call
+  useEffect(() => {
+    const id = searchParams.get("call_id");
+    if (!id || hasAppliedCallIdRef.current) return;
+    hasAppliedCallIdRef.current = true;
+    setCallId(id);
+    setStatus("queued");
+    openStream(id);
+  }, [searchParams, openStream]);
+
   const handleStart = async () => {
     setStatus("starting");
     setMessages([]);
@@ -359,7 +384,18 @@ export default function CallPage() {
   const isLive = status === "ringing" || status === "in-progress" || status === "queued" || status === "starting";
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center px-6 gap-10">
+    <div className="relative min-h-screen flex flex-col items-center justify-center px-6 pt-14 pb-10 gap-10 bg-[#fffdf9]">
+      <div className="absolute left-4 top-4 sm:left-6 sm:top-6">
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-2 rounded-full border border-[#e8dcc8] bg-white/90 px-4 py-2 text-sm font-medium text-[#5d534b] shadow-sm transition hover:border-[#d4c4a8] hover:bg-white"
+        >
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Back to Dashboard
+        </Link>
+      </div>
       <StatusBadge status={status} />
 
       <div className="flex flex-col md:flex-row items-center gap-12">
@@ -378,7 +414,7 @@ export default function CallPage() {
         {(status === "idle" || status === "ended") && (
           <button
             onClick={handleStart}
-            className="px-8 py-3 rounded-full bg-purple-600 hover:bg-purple-700 text-white font-semibold text-sm transition-all shadow-lg shadow-purple-600/25 hover:shadow-purple-600/40 cursor-pointer"
+            className="px-8 py-3 rounded-full bg-[#f5a623] hover:bg-[#eb9712] text-[#1f1c19] font-semibold text-sm transition-all shadow-lg shadow-amber-900/20 hover:shadow-amber-900/30 cursor-pointer"
           >
             {status === "ended" ? "Call Again" : "Start Call"}
           </button>
