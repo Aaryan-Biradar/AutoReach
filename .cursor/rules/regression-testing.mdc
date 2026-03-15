@@ -1,0 +1,23 @@
+---
+description: Regression testing — verify existing features when adding or changing code
+alwaysApply: true
+---
+
+# Regression Testing When Implementing Features
+
+When implementing new features or changing existing code:
+
+1. **Identify touchpoints**  
+   Before or after your change, note which flows your edits affect (e.g. Queue Call → `/api/calls/start` → /call page, or map token → dashboard map).
+
+2. **Don’t break existing behavior**  
+   - Preserve current API contracts: request/response shapes, env vars, and which service “owns” which config (e.g. backend .env for `CUSTOMER_PHONE_NUMBER`, frontend for `NEXT_PUBLIC_*`).  
+   - If you add optional parameters or new endpoints, ensure existing callers still work without them.
+
+3. **Quick sanity checks**  
+   After changes, mentally or manually verify:  
+   - Key user flows still work (e.g. “Queue Call” starts a call to the number in backend .env and navigates to /call; call page shows transcript and returns to normal when the call ends).  
+   - No unintended overrides (e.g. sending a store phone number in the body must not override `CUSTOMER_PHONE_NUMBER` for the Queue Call flow).
+
+4. **Document intent where it’s easy to regress**  
+   Use short comments or docstrings for behavior that’s easy to break (e.g. “Do not send phone_number — backend uses CUSTOMER_PHONE_NUMBER from .env”).

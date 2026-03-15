@@ -612,6 +612,7 @@ export default function Home() {
     return () => controller.abort();
   }, []);
 
+  /** Starts a call to the number in the backend .env (CUSTOMER_PHONE_NUMBER). Do not send phone_number in the body. */
   async function queueCallForSelectedStore() {
     if (!selectedStore || isQueueingCall) {
       return;
@@ -621,7 +622,7 @@ export default function Home() {
       const res = await fetch(`${API_URL}/api/calls/start`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
+        body: JSON.stringify({}), // intentionally no phone_number — backend uses CUSTOMER_PHONE_NUMBER from .env
       });
       if (!res.ok) {
         const err = await res.text();

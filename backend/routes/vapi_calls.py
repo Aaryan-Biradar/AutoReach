@@ -19,7 +19,7 @@ VAPI_BASE = "https://api.vapi.ai"
 VAPI_PRIVATE_KEY = os.getenv("VAPI_PRIVATE_KEY", "")
 ASSISTANT_ID = os.getenv("ASSISTANT_ID", "")
 PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID", "")
-CUSTOMER_PHONE_NUMBER = os.getenv("CUSTOMER_PHONE_NUMBER", "")
+CUSTOMER_PHONE_NUMBER = (os.getenv("CUSTOMER_PHONE_NUMBER") or "").strip()
 
 _active_calls: set[str] = set()
 
@@ -49,9 +49,9 @@ async def start_call(req: StartCallRequest | None = None):
       2. POST /vapi/webhook for transcript/status events
     The frontend opens an EventSource on /api/calls/{call_id}/stream.
     """
-    target_number = (
-        req.phone_number if req and req.phone_number else CUSTOMER_PHONE_NUMBER
-    )
+    # Queue Call from dashboard sends no phone_number; we use CUSTOMER_PHONE_NUMBER from .env
+    raw = (req.phone_number if req and req.phone_number else CUSTOMER_PHONE_NUMBER) or ""
+    target_number = raw.strip() if isinstance(raw, str) else ""
     if not target_number:
         logger.warning("POST /calls/start — no phone number (set CUSTOMER_PHONE_NUMBER in .env or send phone_number in body)")
         raise HTTPException(status_code=400, detail="No phone number provided. Set CUSTOMER_PHONE_NUMBER in .env or send { \"phone_number\": \"+1...\" } in the request body.")

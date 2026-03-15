@@ -277,6 +277,8 @@ export default function CallPage() {
   const esRef = useRef<EventSource | null>(null);
   const streamErrorCountRef = useRef(0);
   const hasAppliedCallIdRef = useRef(false);
+  const statusRef = useRef<CallStatus>(status);
+  statusRef.current = status;
 
   const closeStream = useCallback(() => {
     if (esRef.current) {
@@ -296,12 +298,14 @@ export default function CallPage() {
         streamErrorCountRef.current = 0; // reset on successful message
         try {
           const msg = JSON.parse(event.data);
-          const msgType = msg.type as string;
+          const msgType = (msg.type as string) ?? "";
 
           if (msgType === "transcript" || (typeof msgType === "string" && msgType.startsWith("transcript"))) {
-            const role = (msg.role as string) || "user";
-            const text = typeof msg.transcript === "string" ? msg.transcript.trim() : "";
-            const transcriptType = (msg.transcriptType as string) || "partial";
+            const inner = msg.message ?? msg;
+            const role = (msg.role ?? inner.role ?? "user") as string;
+            const rawTranscript = msg.transcript ?? inner.transcript ?? "";
+            const text = typeof rawTranscript === "string" ? rawTranscript.trim() : "";
+            const transcriptType = (msg.transcriptType ?? inner.transcriptType ?? "partial") as string;
 
             if (!text) return;
 
@@ -312,7 +316,11 @@ export default function CallPage() {
               setPartial({ role, text });
             }
           } else if (msgType === "status-update") {
-            const vapiStatus = (msg.status || (msg.call && msg.call.status)) as string;
+            const raw =
+              msg.status ??
+              (typeof msg.call === "object" && msg.call !== null ? msg.call.status : null) ??
+              (typeof msg.message === "object" && msg.message !== null ? msg.message.status : null);
+            const vapiStatus = typeof raw === "string" ? raw.toLowerCase().replace(/_/g, "-") : "";
             if (vapiStatus === "in-progress") setStatus("in-progress");
             else if (vapiStatus === "ringing") setStatus("ringing");
             else if (vapiStatus === "queued") setStatus("queued");
@@ -332,9 +340,20 @@ export default function CallPage() {
       };
 
       es.onerror = () => {
-        // Don't close on first error (browsers sometimes fire once on connect); close after repeated failures
         streamErrorCountRef.current += 1;
-        if (streamErrorCountRef.current >= 2) closeStream();
+        const current = statusRef.current;
+        const isLive =
+          current === "queued" ||
+          current === "ringing" ||
+          current === "in-progress" ||
+          current === "starting";
+        if (isLive && streamErrorCountRef.current >= 1) {
+          setStatus("ended");
+          setPartial(null);
+          closeStream();
+        } else if (!isLive && streamErrorCountRef.current >= 2) {
+          closeStream();
+        }
       };
     },
     [closeStream],
