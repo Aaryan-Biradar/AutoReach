@@ -1,37 +1,65 @@
-Source: Guide to Event Organization document provided by the user.
+---
+title: Event Organization Guide
+source: FFTC Internal Guide to Event Organization
+category: operations / planning
+last_updated: 2026
+use_when: >
+  Questions arise about how far in advance FFTC plans events, what steps are
+  involved in organizing a food drive, how volunteers are recruited, or how
+  food banks are coordinated. Also use to explain FFTC's structured approach
+  when a store asks about professionalism or reliability.
+---
 
-Lead organizers follow a staged preparation timeline for FFTC events:
+# EVENT ORGANIZATION GUIDE
+## Food for the Capital (FFTC)
 
-8 weeks before:
-- create a Google Drive folder for the event using the month and year
-- duplicate and update the volunteer registration form
-- identify target stores on a spreadsheet
+---
 
-6 weeks before:
-- begin store outreach
-- divide stores among outreach team members
-- try to keep the same FFTC member as the main point of contact for each store
+## OVERVIEW
 
-4 weeks before:
-- contact food banks
-- notify them of the event date
-- ask about boxes, posters, and pickup after the event
-- arrange how the donations will be collected afterward
+FFTC follows a staged preparation timeline for every event. Lead organizers begin
+planning up to 8 weeks before the event date. This structure ensures stores,
+volunteers, and food banks are all coordinated well in advance.
 
-3 weeks before:
-- recruit volunteers through Instagram and the mailing list
-- keep volunteer signups organized by location
+---
 
-2 weeks before:
-- post promotional content
+## PREPARATION TIMELINE
 
-1 week before:
-- confirm volunteer availability
+### 8 Weeks Before
+- Create a Google Drive folder for the event, named by month and year.
+- Duplicate and update the volunteer registration form.
+- Identify target store locations on a spreadsheet.
 
-1 day before:
-- send reminder emails
+### 6 Weeks Before
+- Begin store outreach.
+- Divide target stores among outreach team members.
+- Assign a consistent FFTC point of contact per store for continuity.
 
-Operational takeaway for the voice agent:
-- FFTC plans events ahead of time
-- outreach is structured
-- the team can follow up by email and coordinate reminders closer to the event
+### 4 Weeks Before
+- Contact partner food banks.
+- Notify them of the confirmed event date.
+- Confirm availability of donation boxes and posters.
+- Arrange post-event donation pickup logistics.
+
+### 3 Weeks Before
+- Recruit volunteers via Instagram and the FFTC mailing list.
+- Organize sign-ups by store location.
+
+### 2 Weeks Before
+- Post promotional content on social media and other channels.
+
+### 1 Week Before
+- Confirm volunteer availability for each location.
+
+### 1 Day Before
+- Send reminder emails to confirmed volunteers and store contacts.
+
+---
+
+## KEY OPERATIONAL TAKEAWAYS
+
+- FFTC plans events with significant lead time — stores are contacted 6 weeks out.
+- Every store has a dedicated FFTC point of contact from first call through event day.
+- Follow-up by email and reminder calls are standard practice close to the event.
+- Volunteer coordination is organized by location to prevent scheduling conflicts.
+- Food bank logistics (boxes, posters, pickup) are confirmed at the 4-week mark.

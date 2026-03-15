@@ -1,31 +1,100 @@
-FOOD FOR THE CAPITAL — BOOTH EVENT LOGISTICS
+---
+title: Booth Event Logistics
+source: Food for the Capital — Internal Operations Document
+category: operations / logistics
+last_updated: 2026
+use_when: >
+  A store manager asks operational questions about how a booth event works —
+  what is set up, who staffs it, what time it runs, whether store staff are
+  involved, what is collected, or what happens after the event. Also use to
+  address liability, space, or staffing concerns raised during outreach.
+---
 
-What is a food donation booth event?
-FFTC sets up a small food collection station outside the front entrance of a grocery store. The booth consists of a table and food bank donation boxes. Our team politely asks customers entering and leaving the store if they would like to donate non-perishable food items or make a cash contribution to support local Ottawa food banks.
+# BOOTH EVENT LOGISTICS
+## Food for the Capital (FFTC)
 
-Staffing:
-Every booth event is staffed by exactly 2 FFTC volunteers and 1 FFTC executive. The executive supervises the event and ensures everything runs smoothly. Volunteers are trained on how to engage with customers respectfully and provide information about food insecurity in Ottawa.
+---
 
-Timing:
-Standard events run on weekends (Saturday or Sunday) from 10:00 AM to 2:00 PM. This 4-hour window is chosen to coincide with peak grocery shopping times while keeping the commitment manageable for our student volunteers.
+## OVERVIEW
 
-Setup and Cleanup:
-FFTC handles all setup and cleanup. We arrive before 10:00 AM, set up our table and donation boxes, and break everything down after 2:00 PM. The store does not need to provide any equipment, supplies, or staff assistance.
+FFTC sets up a small food collection station outside the front entrance of a
+partnering grocery store. The booth collects non-perishable food items and
+monetary donations for local Ottawa food banks.
 
-Location:
-The booth is set up entirely outside the store, typically near the main entrance on the sidewalk or in the parking lot area. We do not set up inside the store, and we do not block any entrances, exits, or fire lanes.
+---
 
-What we collect:
-We accept non-perishable food items (canned goods, dry pasta, rice, cereal, etc.) and monetary donations. All collected items and funds go directly to local Ottawa food banks.
+## STAFFING
 
-Impact on store operations:
-Our booth has zero impact on store operations. We do not interfere with checkout lanes, aisles, or loading areas. Customers are free to decline participation — our volunteers never pressure anyone.
+Every booth event is staffed by exactly:
+- 2 FFTC volunteers
+- 1 FFTC executive (supervises and manages the event)
 
-Store benefits:
-Hosting an FFTC booth demonstrates the store's commitment to the local community. Many customers appreciate seeing their grocery store support a good cause. We can provide the store with a promotional poster to display if desired.
+Volunteers are trained to engage with customers respectfully and share information
+about food insecurity in Ottawa. The executive is present for the full duration.
 
-Insurance and safety:
-The booth operates entirely outside the store premises. FFTC volunteers and executives are always present to supervise. We follow all local regulations regarding public solicitation and charitable activities.
+---
 
-Post-event:
-After the event, FFTC delivers all collected food to our partner food banks. We can provide the store with a summary of the event's impact (pounds of food collected, monetary donations raised) for their records.
+## TIMING
+
+- Events run on **weekends (Saturday or Sunday)**
+- Standard hours: **10:00 AM to 2:00 PM** (4-hour window)
+- This window is chosen to align with peak grocery shopping hours
+
+---
+
+## SETUP AND CLEANUP
+
+- FFTC handles all setup and cleanup — **the store provides nothing**
+- Team arrives before 10:00 AM to set up
+- All equipment is removed after 2:00 PM
+- Store staff are not required to assist in any way
+
+---
+
+## LOCATION
+
+- The booth is set up **entirely outside the store**
+- Positioned near the main entrance on the sidewalk or parking lot area
+- Does not block any entrances, exits, or fire lanes
+- Never inside the store
+
+---
+
+## WHAT IS COLLECTED
+
+- Non-perishable food items (canned goods, dry pasta, rice, cereal, etc.)
+- Monetary donations (cash)
+- All items and funds go directly to local Ottawa food banks
+
+---
+
+## IMPACT ON STORE OPERATIONS
+
+- **Zero impact on store operations**
+- No interference with checkout lanes, aisles, or loading areas
+- Customers are free to decline — volunteers never pressure anyone
+- The booth is self-contained and self-managed
+
+---
+
+## STORE BENEFITS
+
+- Demonstrates the store's commitment to the local community
+- Customers often respond positively to seeing their grocery store support a local cause
+- FFTC can provide a **promotional poster** for the store to display before and during the event
+- Post-event impact summary available on request (pounds of food collected, monetary total)
+
+---
+
+## INSURANCE AND SAFETY
+
+- The booth operates entirely outside store premises
+- FFTC volunteers and executives are always present and supervising
+- FFTC complies with local regulations on public solicitation and charitable activities
+
+---
+
+## POST-EVENT
+
+- All collected food is delivered to partner food banks by the FFTC team
+- Store can receive a written summary of event results for their records

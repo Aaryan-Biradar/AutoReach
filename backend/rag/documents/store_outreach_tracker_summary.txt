@@ -1,31 +1,85 @@
-Source: October 2024, March 2025, and January 2026 FFTC tracker spreadsheets provided by the user.
+---
+title: Store Outreach Tracker Summary
+source: FFTC Outreach Tracker Spreadsheets — October 2024, March 2025, January 2026
+category: outreach / store intelligence
+last_updated: January 2026
+use_when: >
+  Agent needs to understand how stores have responded to outreach historically,
+  what reasons stores commonly give when declining, what next steps to take when
+  a store is uncertain, or how to handle stores that ask for hyper-local donation
+  routing. Use to calibrate tone and strategy for specific store types or situations.
+---
 
-Observed store outreach patterns:
-- Some stores accept quickly when asked to review an email summary
-- Some stores reject because they are already too tight, already booked, or already running their own food support efforts
-- Some stores are interested but want a callback after speaking with another manager or local partner
-- Some stores ask for reminders a few days before the event
-- Weekend availability matters for some locations
+# STORE OUTREACH TRACKER SUMMARY
+## Food for the Capital (FFTC)
 
-Examples of positive outreach outcomes in the trackers:
-- Metro Chapman Mills was marked yes in January 2026
-- Independent Grocer Nepean was marked yes in January 2026
-- Metro Greenbank was marked yes in January 2026
-- FreshCo Strandherd was marked yes in January 2026
-- Metro Eagleson was marked yes in January 2026
+---
 
-Examples of cautious or conditional outcomes:
-- FreshCo Robertson and Moodie asked for a callback and wanted assurance that support would stay hyper-local to Bells Corners and FAMSAC
-- Food Basics Hazeldean needed internal approval after receiving an email
-- Real Canadian Superstore Kanata asked for email follow-up and internal review
+## OVERVIEW
 
-Examples of common rejection reasons:
-- already too tight operationally
-- already booked that weekend
-- already doing their own food drives
+FFTC tracks store outreach across multiple events. Patterns from the October 2024,
+March 2025, and January 2026 event trackers are summarized here to guide agent
+behavior during calls.
 
-Useful call guidance from the trackers:
-- if a manager asks for email, offer a short written summary
-- if a manager asks for a callback, capture the day or timing clearly
-- if a manager wants support to remain local, acknowledge that and note the neighbourhood or nearby food bank preference
-- if a store seems interested but not confirmed, the right next step is usually email plus a reminder call
+---
+
+## CONFIRMED STORE PARTNERS (January 2026 Examples)
+
+The following stores agreed to host an FFTC booth event:
+- Metro Chapman Mills
+- Independent Grocer Nepean
+- Metro Greenbank
+- FreshCo Strandherd
+- Metro Eagleson
+
+These examples demonstrate that mid-size and large grocery chains across Ottawa
+have been receptive to FFTC partnership requests.
+
+---
+
+## CAUTIOUS OR CONDITIONAL OUTCOMES
+
+Some stores are interested but require additional steps before confirming:
+
+| Store                              | Situation                                                                 |
+|------------------------------------|---------------------------------------------------------------------------|
+| FreshCo Robertson and Moodie       | Requested callback; wanted assurance donations stay local to Bells Corners and benefit FAMSAC specifically |
+| Food Basics Hazeldean              | Needed internal approval after receiving an email summary                 |
+| Real Canadian Superstore Kanata    | Requested email follow-up and internal review before confirming           |
+
+**Takeaway:** When a store is conditionally interested, the standard next step is
+email + a follow-up reminder call closer to the event.
+
+---
+
+## COMMON REJECTION REASONS
+
+Stores that declined most often cited one of the following:
+- Already operationally too tight to accommodate a booth
+- Already booked for that specific weekend
+- Already running their own in-store food drive or donation program
+
+**Takeaway:** These are structural constraints, not objections to FFTC itself.
+Accept gracefully, thank the contact, and leave the door open for future events.
+
+---
+
+## CALL STRATEGY GUIDANCE
+
+| Situation                                 | Recommended Action                                                        |
+|-------------------------------------------|---------------------------------------------------------------------------|
+| Manager requests information by email     | Offer a short written summary; confirm their email address                |
+| Manager requests a callback               | Capture the exact day and time; follow up precisely as agreed             |
+| Manager wants donations to stay local     | Acknowledge the neighbourhood; name the nearest food bank specifically    |
+| Store seems interested but not confirmed  | Email summary + reminder call — do not mark as yes until verbally confirmed |
+| Store declines due to existing program    | Acknowledge their community work; offer to connect at a future event      |
+
+---
+
+## AGENT NOTES
+- Always record callback timing in detail — vague callbacks often do not convert.
+- If a store references a specific community (e.g., Bells Corners, Kanata), match
+  the conversation to the nearest FFTC partner food bank from the Ottawa Food
+  Resources document.
+- Stores that have accepted before are strong targets — use the repeat-partner line
+  from the call script.
