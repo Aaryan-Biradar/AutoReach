@@ -22,12 +22,26 @@ services:
       - ./backend/.env
     volumes:
       - chroma_data:/app/chroma_db
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   #  Next.js frontend  
   frontend:
     build: ./frontend
     ports:
       - "3000:3000"
+
+  # ngrok: tunnels to backend so Vapi can reach /chat/completions and /vapi/webhook
+  ngrok:
+    image: ngrok/ngrok:alpine
+    env_file:
+      - .env
+      - ./backend/.env
+    command: ["http", "backend:8000"]
+    depends_on:
+      - backend
+    ports:
+      - "4040:4040"
 
 volumes:
   chroma_data:
