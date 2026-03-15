@@ -88,7 +88,6 @@ reach them? I'd really appreciate it."
 
 ## AGENT NOTES
 - Lead with empathy before pivoting — acknowledge the concern genuinely before offering a solution.
-- When in doubt, offer to send an email. It lowers the immediate pressure and keeps the door open.
 - If a store mentions keeping donations local to a specific neighbourhood, acknowledge it
   and reference the nearest food bank by name (see Ottawa Food Resources document).
 - Never push back aggressively on a hard no — use the graceful decline from the call script.
