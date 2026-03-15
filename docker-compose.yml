@@ -31,7 +31,7 @@ services:
     ports:
       - "3000:3000"
     env_file:
-      - ./frontend/.env.local
+      - ./frontend/.env
 
   # ngrok: tunnels to backend so Vapi can reach /chat/completions and /vapi/webhook
   ngrok:

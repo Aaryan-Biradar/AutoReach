@@ -112,6 +112,7 @@ async def stream_call(call_id: str):
             detail="No active call found — was it started via /calls/start?",
         )
 
+    logger.info("SSE stream opened for call_id: %s", call_id)
     queue = get_queue(call_id)
 
     async def event_generator():
@@ -124,6 +125,7 @@ async def stream_call(call_id: str):
                     continue
 
                 payload = json.dumps(event, default=str)
+                logger.debug("SSE sending event to call %s: %s", call_id, event.get("type"))
                 yield f"data: {payload}\n\n"
 
                 msg_type = event.get("type", "")
